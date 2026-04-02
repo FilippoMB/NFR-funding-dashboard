@@ -1,110 +1,116 @@
 {
   "institutions": [
     {
-      "id": "equinor",
-      "label": "Equinor",
-      "projectCount": 3,
-      "totalFundingNok": 241000000
+      "id": "sintef",
+      "label": "SINTEF",
+      "projectCount": 1643,
+      "totalFundingNok": 21147275958
+    },
+    {
+      "id": "uio",
+      "label": "UIO",
+      "projectCount": 2907,
+      "totalFundingNok": 20356905755
     },
     {
       "id": "ntnu",
       "label": "NTNU",
-      "projectCount": 2,
-      "totalFundingNok": 200000000
-    },
-    {
-      "id": "uio",
-      "label": "University of Oslo",
-      "projectCount": 3,
-      "totalFundingNok": 196000000
-    },
-    {
-      "id": "uit",
-      "label": "UiT The Arctic University of Norway",
-      "projectCount": 4,
-      "totalFundingNok": 190000000
-    },
-    {
-      "id": "norce",
-      "label": "NORCE",
-      "projectCount": 4,
-      "totalFundingNok": 142000000
+      "projectCount": 2094,
+      "totalFundingNok": 17115507447
     },
     {
       "id": "uib",
-      "label": "University of Bergen",
-      "projectCount": 2,
-      "totalFundingNok": 137000000
+      "label": "UIB",
+      "projectCount": 1535,
+      "totalFundingNok": 10855981752
+    },
+    {
+      "id": "uit",
+      "label": "UIT",
+      "projectCount": 869,
+      "totalFundingNok": 5487337050
+    },
+    {
+      "id": "ife",
+      "label": "IFE",
+      "projectCount": 282,
+      "totalFundingNok": 5195955844
     }
   ],
   "schemes": [
     {
-      "id": "green-transition",
-      "label": "Green Transition",
-      "projectCount": 6,
-      "totalFundingNok": 374000000
+      "id": "tilskudd-nfr",
+      "label": "Tilskudd NFR",
+      "projectCount": 6838,
+      "totalFundingNok": 76179516939
     },
     {
-      "id": "enabling-tech",
-      "label": "Enabling Technologies",
-      "projectCount": 5,
-      "totalFundingNok": 353000000
+      "id": "store-programmer",
+      "label": "Store programmer",
+      "projectCount": 4116,
+      "totalFundingNok": 20084506600
     },
     {
-      "id": "health-innovation",
-      "label": "Health Innovation",
-      "projectCount": 6,
-      "totalFundingNok": 288000000
+      "id": "basisbevilgninger",
+      "label": "Basisbevilgninger",
+      "projectCount": 340,
+      "totalFundingNok": 18469838496
     },
     {
-      "id": "ocean-research",
-      "label": "Ocean Research",
-      "projectCount": 4,
-      "totalFundingNok": 253000000
+      "id": "brukerstyrte-innovasjonsprogrammer",
+      "label": "Brukerstyrte innovasjonsprogrammer",
+      "projectCount": 2988,
+      "totalFundingNok": 15626827874
     },
     {
-      "id": "regional-innovation",
-      "label": "Regional Innovation",
-      "projectCount": 4,
-      "totalFundingNok": 133000000
+      "id": "handlingsrettede-programmer",
+      "label": "Handlingsrettede programmer",
+      "projectCount": 2622,
+      "totalFundingNok": 11822319598
+    },
+    {
+      "id": "fri-prosjektst-tte",
+      "label": "Fri prosjektstøtte",
+      "projectCount": 1886,
+      "totalFundingNok": 10119150250
     }
   ],
   "subjects": [
     {
-      "id": "digitalisation",
-      "label": "Digitalisation",
-      "projectCount": 5,
-      "totalFundingNok": 353000000
+      "id": "teknologi",
+      "label": "Teknologi",
+      "projectCount": 11381,
+      "totalFundingNok": 65923536948
     },
     {
-      "id": "health",
-      "label": "Health",
-      "projectCount": 6,
-      "totalFundingNok": 288000000
+      "id": "matematikk-og-naturvitenskap",
+      "label": "Matematikk og naturvitenskap",
+      "projectCount": 5423,
+      "totalFundingNok": 42646969825
     },
     {
-      "id": "energy",
-      "label": "Energy",
-      "projectCount": 4,
-      "totalFundingNok": 278000000
+      "id": "samfunnsvitenskap",
+      "label": "Samfunnsvitenskap",
+      "projectCount": 5016,
+      "totalFundingNok": 31145278163
     },
     {
-      "id": "marine",
-      "label": "Marine Systems",
-      "projectCount": 4,
-      "totalFundingNok": 253000000
+      "id": "medisin-og-helsefag",
+      "label": "Medisin og helsefag",
+      "projectCount": 3008,
+      "totalFundingNok": 19086930019
     },
     {
-      "id": "climate",
-      "label": "Climate and Environment",
-      "projectCount": 4,
-      "totalFundingNok": 174000000
+      "id": "landbruks-og-fiskerifag",
+      "label": "Landbruks- og fiskerifag",
+      "projectCount": 1922,
+      "totalFundingNok": 15455521179
     },
     {
-      "id": "social-science",
-      "label": "Social Sciences",
-      "projectCount": 2,
-      "totalFundingNok": 55000000
+      "id": "humaniora",
+      "label": "Humaniora",
+      "projectCount": 1878,
+      "totalFundingNok": 6511898157
     }
   ]
 }

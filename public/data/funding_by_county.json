@@ -1,92 +1,92 @@
 [
   {
-    "countyId": "trondelag",
-    "countyName": "Trøndelag",
-    "projectCount": 2,
-    "totalFundingNok": 200000000
-  },
-  {
-    "countyId": "rogaland",
-    "countyName": "Rogaland",
-    "projectCount": 2,
-    "totalFundingNok": 183000000
-  },
-  {
-    "countyId": "oslo",
+    "countyId": "03",
     "countyName": "Oslo",
-    "projectCount": 2,
-    "totalFundingNok": 161000000
+    "projectCount": 9863,
+    "totalFundingNok": 56990537617
   },
   {
-    "countyId": "vestland",
+    "countyId": "50",
+    "countyName": "Trøndelag",
+    "projectCount": 5268,
+    "totalFundingNok": 46273909947
+  },
+  {
+    "countyId": "46",
     "countyName": "Vestland",
-    "projectCount": 2,
-    "totalFundingNok": 135000000
+    "projectCount": 4073,
+    "totalFundingNok": 26269168074
   },
   {
-    "countyId": "nordland",
-    "countyName": "Nordland",
-    "projectCount": 2,
-    "totalFundingNok": 120000000
-  },
-  {
-    "countyId": "akershus",
+    "countyId": "32",
     "countyName": "Akershus",
-    "projectCount": 2,
-    "totalFundingNok": 109000000
+    "projectCount": 3128,
+    "totalFundingNok": 22306778475
   },
   {
-    "countyId": "troms",
+    "countyId": "55",
     "countyName": "Troms",
-    "projectCount": 2,
-    "totalFundingNok": 100000000
+    "projectCount": 1752,
+    "totalFundingNok": 11943011070
   },
   {
-    "countyId": "innlandet",
+    "countyId": "11",
+    "countyName": "Rogaland",
+    "projectCount": 1390,
+    "totalFundingNok": 5613296675
+  },
+  {
+    "countyId": "34",
     "countyName": "Innlandet",
-    "projectCount": 2,
-    "totalFundingNok": 83000000
+    "projectCount": 632,
+    "totalFundingNok": 2697657915
   },
   {
-    "countyId": "vestfold",
-    "countyName": "Vestfold",
-    "projectCount": 2,
-    "totalFundingNok": 62000000
-  },
-  {
-    "countyId": "agder",
+    "countyId": "42",
     "countyName": "Agder",
-    "projectCount": 2,
-    "totalFundingNok": 58000000
+    "projectCount": 719,
+    "totalFundingNok": 2292776743
   },
   {
-    "countyId": "more-og-romsdal",
+    "countyId": "15",
     "countyName": "Møre og Romsdal",
-    "projectCount": 1,
-    "totalFundingNok": 49000000
+    "projectCount": 480,
+    "totalFundingNok": 1937722565
   },
   {
-    "countyId": "buskerud",
+    "countyId": "18",
+    "countyName": "Nordland",
+    "projectCount": 511,
+    "totalFundingNok": 1875886852
+  },
+  {
+    "countyId": "33",
     "countyName": "Buskerud",
-    "projectCount": 1,
-    "totalFundingNok": 41000000
+    "projectCount": 357,
+    "totalFundingNok": 1577602442
   },
   {
-    "countyId": "telemark",
-    "countyName": "Telemark",
-    "projectCount": 1,
-    "totalFundingNok": 37000000
-  },
-  {
-    "countyId": "ostfold",
+    "countyId": "31",
     "countyName": "Østfold",
-    "projectCount": 1,
-    "totalFundingNok": 35000000
+    "projectCount": 376,
+    "totalFundingNok": 1458567708
   },
   {
-    "countyId": "finnmark",
+    "countyId": "39",
+    "countyName": "Vestfold",
+    "projectCount": 381,
+    "totalFundingNok": 1283278596
+  },
+  {
+    "countyId": "40",
+    "countyName": "Telemark",
+    "projectCount": 314,
+    "totalFundingNok": 961336078
+  },
+  {
+    "countyId": "56",
     "countyName": "Finnmark",
-    "projectCount": 1,
-    "totalFundingNok": 28000000
+    "projectCount": 94,
+    "totalFundingNok": 270515614
   }
 ]

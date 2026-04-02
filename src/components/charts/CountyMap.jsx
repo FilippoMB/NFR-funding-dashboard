@@ -69,8 +69,8 @@ export default function CountyMap({
   const projection = geoMercator()
     .fitExtent(
       [
-        [44, 34],
-        [VIEWBOX_WIDTH - 44, VIEWBOX_HEIGHT - 34]
+        [10, 10],
+        [VIEWBOX_WIDTH - 10, VIEWBOX_HEIGHT - 10]
       ],
       rewoundGeojson
     );
@@ -112,18 +112,6 @@ export default function CountyMap({
   const topCounties = data.filter((item) => item.totalFundingNok > 0).slice(0, 5);
 
   return (
-    <section className="map-panel">
-      <div className="panel-heading">
-        <div>
-          <p className="eyebrow">County funding map</p>
-          <h2>Real county boundary choropleth</h2>
-        </div>
-        <p className="panel-copy">
-          Click a county to filter the trend and ranking views.
-        </p>
-      </div>
-      <div className="map-layout">
-        <div className="map-stage">
           <svg
             aria-label="County-level choropleth of Norwegian funding allocations"
             className="county-map"
@@ -182,57 +170,5 @@ export default function CountyMap({
                 );
               })}
           </svg>
-        </div>
-        <div className="map-sidecar">
-          <div className="focus-card">
-            <p className="eyebrow">
-              {activeCountyId ? "Selected county" : "Leading county"}
-            </p>
-            <h3>{focusCounty?.countyName ?? "No county selected"}</h3>
-            <div className="focus-metrics">
-              <div>
-                <span>Funding</span>
-                <strong>
-                  {focusCounty
-                    ? formatCompactCurrency(focusCounty.totalFundingNok)
-                    : "NOK 0"}
-                </strong>
-              </div>
-              <div>
-                <span>Projects</span>
-                <strong>
-                  {focusCounty ? formatNumber(focusCounty.projectCount) : "0"}
-                </strong>
-              </div>
-            </div>
-          </div>
-
-          <div className="map-legend">
-            <p>Funding scale</p>
-            <div className="legend-ramp" aria-hidden="true" />
-            <div className="legend-scale">
-              <span>NOK 0</span>
-              <span>{formatCompactCurrency(maxFunding)}</span>
-            </div>
-            <p className="legend-note">
-              {formatNumber(countiesWithFunding)} counties currently carry visible
-              allocation in the selected slice.
-            </p>
-          </div>
-
-          <div className="top-counties-card">
-            <p className="eyebrow">Top counties</p>
-            <ol className="top-counties-list">
-              {topCounties.map((county) => (
-                <li key={county.countyId}>
-                  <span>{county.countyName}</span>
-                  <strong>{formatCompactCurrency(county.totalFundingNok)}</strong>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }

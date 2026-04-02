@@ -1,27 +1,182 @@
 [
   {
+    "projectCount": 1,
+    "totalFundingNok": 169457945,
+    "year": 1990
+  },
+  {
+    "projectCount": 1,
+    "totalFundingNok": 2169163,
+    "year": 1993
+  },
+  {
+    "projectCount": 16,
+    "totalFundingNok": 645934240,
+    "year": 1994
+  },
+  {
+    "projectCount": 4,
+    "totalFundingNok": 1730575000,
+    "year": 1995
+  },
+  {
+    "projectCount": 3,
+    "totalFundingNok": 291421080,
+    "year": 1996
+  },
+  {
     "projectCount": 5,
-    "totalFundingNok": 343000000,
+    "totalFundingNok": 1082155000,
+    "year": 1997
+  },
+  {
+    "projectCount": 4,
+    "totalFundingNok": 239051956,
+    "year": 1998
+  },
+  {
+    "projectCount": 1,
+    "totalFundingNok": 111899603,
+    "year": 1999
+  },
+  {
+    "projectCount": 1,
+    "totalFundingNok": 217000000,
+    "year": 2000
+  },
+  {
+    "projectCount": 4,
+    "totalFundingNok": 1996182310,
+    "year": 2001
+  },
+  {
+    "projectCount": 12,
+    "totalFundingNok": 934240756,
+    "year": 2002
+  },
+  {
+    "projectCount": 17,
+    "totalFundingNok": 1241974216,
+    "year": 2003
+  },
+  {
+    "projectCount": 59,
+    "totalFundingNok": 2396097296,
+    "year": 2004
+  },
+  {
+    "projectCount": 85,
+    "totalFundingNok": 721197790,
+    "year": 2005
+  },
+  {
+    "projectCount": 284,
+    "totalFundingNok": 1971368721,
+    "year": 2006
+  },
+  {
+    "projectCount": 603,
+    "totalFundingNok": 5800207208,
+    "year": 2007
+  },
+  {
+    "projectCount": 737,
+    "totalFundingNok": 4347674073,
+    "year": 2008
+  },
+  {
+    "projectCount": 847,
+    "totalFundingNok": 14812640607,
+    "year": 2009
+  },
+  {
+    "projectCount": 1134,
+    "totalFundingNok": 4438175954,
+    "year": 2010
+  },
+  {
+    "projectCount": 1424,
+    "totalFundingNok": 5361173525,
+    "year": 2011
+  },
+  {
+    "projectCount": 1574,
+    "totalFundingNok": 4891650938,
+    "year": 2012
+  },
+  {
+    "projectCount": 1487,
+    "totalFundingNok": 8725146814,
+    "year": 2013
+  },
+  {
+    "projectCount": 1745,
+    "totalFundingNok": 6313342200,
+    "year": 2014
+  },
+  {
+    "projectCount": 1787,
+    "totalFundingNok": 10860700685,
+    "year": 2015
+  },
+  {
+    "projectCount": 1939,
+    "totalFundingNok": 9678097282,
+    "year": 2016
+  },
+  {
+    "projectCount": 1916,
+    "totalFundingNok": 9407789777,
+    "year": 2017
+  },
+  {
+    "projectCount": 1928,
+    "totalFundingNok": 8346602631,
+    "year": 2018
+  },
+  {
+    "projectCount": 1770,
+    "totalFundingNok": 7936100022,
+    "year": 2019
+  },
+  {
+    "projectCount": 2110,
+    "totalFundingNok": 12842227608,
     "year": 2020
   },
   {
-    "projectCount": 5,
-    "totalFundingNok": 288000000,
+    "projectCount": 2194,
+    "totalFundingNok": 14064266696,
     "year": 2021
   },
   {
-    "projectCount": 5,
-    "totalFundingNok": 190000000,
+    "projectCount": 1165,
+    "totalFundingNok": 6075012670,
     "year": 2022
   },
   {
-    "projectCount": 5,
-    "totalFundingNok": 286000000,
+    "projectCount": 1189,
+    "totalFundingNok": 15382629255,
     "year": 2023
   },
   {
-    "projectCount": 5,
-    "totalFundingNok": 294000000,
+    "projectCount": 1036,
+    "totalFundingNok": 5289641077,
     "year": 2024
+  },
+  {
+    "projectCount": 1543,
+    "totalFundingNok": 9853853343,
+    "year": 2025
+  },
+  {
+    "projectCount": 709,
+    "totalFundingNok": 5551574930,
+    "year": 2026
+  },
+  {
+    "projectCount": 4,
+    "totalFundingNok": 22814000,
+    "year": 2027
   }
 ]

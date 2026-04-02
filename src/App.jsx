@@ -4,6 +4,7 @@ import KpiStrip from "./components/KpiStrip";
 import CountyMap from "./components/charts/CountyMap";
 import RankingBars from "./components/charts/RankingBars";
 import TimeSeriesChart from "./components/charts/TimeSeriesChart";
+import AllocationPieChart from "./components/charts/AllocationPieChart";
 import {
   ALL_FILTER_VALUE,
   buildCountySeries,
@@ -248,99 +249,88 @@ export default function App() {
   }
 
   return (
-    <main className="app-shell">
-      <aside className="control-rail">
-        <section className="rail-brand">
-          <p className="eyebrow">NFR Funding Stats</p>
-          <h1>Norwegian research funding, shaped into a static decision surface.</h1>
-          <p className="rail-copy">
-            County-level geography, annual funding movement, and ranked allocation
-            views designed for a GitHub Pages deployment.
-          </p>
-        </section>
-
-        <section className="rail-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Scope controls</p>
-              <h2>Slice the current view</h2>
-            </div>
-          </div>
-          <FilterBar
-            activeFilters={filters}
-            availableFilters={availableFilters}
-            onFilterChange={updateFilter}
-            onReset={resetFilters}
-          />
-        </section>
-
-        <section className="rail-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Current slice</p>
-              <h2>Active scope</h2>
-            </div>
-          </div>
-          <dl className="scope-list">
-            {activeScope.map((item) => (
-              <div key={item.label}>
-                <dt>{item.label}</dt>
-                <dd>{item.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        {dashboardData ? (
-          <section className="rail-panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Method notes</p>
-                <h2>Interpretation boundaries</h2>
-              </div>
-            </div>
-            <ul className="note-list">
-              {dashboardData.summary.notes.map((note) => (
-                <li key={note}>{note}</li>
-              ))}
-              <li>
-                County geometry is based on Kartverket data via
-                `robhop/fylker-og-kommuner` under CC BY 4.0.
-              </li>
-            </ul>
-          </section>
-        ) : null}
+    <main className="app-shell sidebar-layout">
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <h1>NFR Funding</h1>
+          <p>Norwegian research statistics</p>
+        </div>
+        <FilterBar
+          activeFilters={filters}
+          availableFilters={availableFilters}
+          onFilterChange={updateFilter}
+          onReset={resetFilters}
+        />
+        <div className="sidebar-footer">
+          <p>Data: JSON Mock Build</p>
+          <p>Latest year: {dashboardData?.summary?.latestYear ?? "..."}</p>
+        </div>
       </aside>
 
-      <section className="workspace">
-        <section className="workspace-header">
-          <div>
-            <p className="eyebrow">Analytics workspace</p>
-            <h2>County choropleth, annual funding profile, and ranked allocation signals</h2>
-          </div>
-          <div className="header-meta">
-            <p>Static JSON-backed interface</p>
-            <p>Latest year: {dashboardData?.summary.latestYear ?? "Loading"}</p>
-          </div>
-        </section>
-
+      <section className="workspace-main">
         {status.type === "error" ? (
           <section className="status-panel is-error">
-            <h2>Data load failed</h2>
+            <h2>Data Load Failed</h2>
             <p>{status.message}</p>
           </section>
         ) : null}
 
         {status.type === "loading" ? (
           <section className="status-panel">
-            <h2>Loading dashboard assets</h2>
-            <p>Fetching static JSON bundles and county geometry.</p>
+            <h2>Loading Dashboard Assets...</h2>
+            <p>Fetching JSON bundles and county geometry</p>
           </section>
         ) : null}
 
         {status.type === "ready" ? (
           <>
-            <section className="signal-strip">
+            <section className="top-visuals layout-split">
+              <div className="map-panel map-tall">
+                <div className="panel-heading">
+                  <h2>Funding by region</h2>
+                  <p className="panel-copy">
+                    Click a county to filter the trend and ranking views.
+                  </p>
+                </div>
+                <div className="map-stage map-enlarged">
+                  <CountyMap
+                    activeCountyId={activeCountyId}
+                    data={countySeries}
+                    geojson={dashboardData.countyGeojson}
+                    onSelectCounty={selectCounty}
+                  />
+                </div>
+              </div>
+              
+              <div className="right-panels" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                <div className="chart-panel">
+                  <div className="panel-heading">
+                    <h2>Annual funding movement</h2>
+                    <p className="panel-copy">
+                      The curve tracks allocated NOK across the selected slice.
+                    </p>
+                  </div>
+                  <TimeSeriesChart data={timeseries} />
+                </div>
+
+                <div className="pie-panels" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                  <div className="ranking-panel">
+                    <div className="panel-heading" style={{marginBottom: "8px"}}>
+                      <h3>Funding Schemes</h3>
+                    </div>
+                    <AllocationPieChart items={rankings.schemes} />
+                  </div>
+                  <div className="ranking-panel">
+                    <div className="panel-heading" style={{marginBottom: "8px"}}>
+                      <h3>Subject Fields</h3>
+                    </div>
+                    <AllocationPieChart items={rankings.subjects} />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="kpi-strip u-margin-top">
               {highlights.map((item) => (
                 <article className="signal-item" key={item.label}>
                   <p>{item.label}</p>
@@ -354,48 +344,22 @@ export default function App() {
 
             {!filteredCube.length ? (
               <section className="status-panel">
-                <h2>No matching records</h2>
-                <p>Reset one or more filters to bring data back into view.</p>
+                <h2>No Matching Records</h2>
+                <p>Try adjusting or resetting your filters.</p>
               </section>
             ) : null}
 
-            <section className="workspace-grid">
-              <CountyMap
-                activeCountyId={activeCountyId}
-                data={countySeries}
-                geojson={dashboardData.countyGeojson}
-                onSelectCounty={selectCounty}
-              />
-              <TimeSeriesChart data={timeseries} />
-            </section>
-
-            <section className="breakdown-header">
-              <div>
-                <p className="eyebrow">Allocation breakdowns</p>
-                <h2>Who receives funding, through which scheme, and in what subject mix</h2>
+            <div className="panel-heading u-margin-top">
+              <h2>Allocation Breakdowns</h2>
+            </div>
+            
+            <section className="ranking-grid single-row">
+              <div className="ranking-panel">
+                <RankingBars
+                  items={rankings.institutions}
+                  title="Top Institutions"
+                />
               </div>
-              <p className="panel-copy">
-                These ranked views react to the same selected slice as the county map
-                and annual trend.
-              </p>
-            </section>
-
-            <section className="ranking-grid">
-              <RankingBars
-                items={rankings.institutions}
-                subtitle="Institution totals reflect the registered project owner."
-                title="Top institutions"
-              />
-              <RankingBars
-                items={rankings.schemes}
-                subtitle="Schemes are ranked by total allocated NOK."
-                title="Top funding schemes"
-              />
-              <RankingBars
-                items={rankings.subjects}
-                subtitle="Subject totals should not be treated as additive across overlapping themes."
-                title="Top subject fields"
-              />
             </section>
           </>
         ) : null}
