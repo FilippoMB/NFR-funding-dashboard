@@ -350,7 +350,7 @@ export default function App() {
                   />
                 </div>
 
-                <div className="pie-panels" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                <div className="pie-panels" style={{ display: "grid", gap: "24px" }}>
                   <div className="ranking-panel">
                     <div className="panel-heading" style={{marginBottom: "8px"}}>
                       <h3>Funding Schemes</h3>

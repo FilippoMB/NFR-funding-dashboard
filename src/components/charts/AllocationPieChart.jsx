@@ -40,9 +40,9 @@ export default function AllocationPieChart({ items }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      <div style={{ width: '100%', height: 220, flexShrink: 0 }}>
-        <ResponsiveContainer>
+    <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ width: '100%', height: 220, flexShrink: 0, minWidth: 0 }}>
+        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
