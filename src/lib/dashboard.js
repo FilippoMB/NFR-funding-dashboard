@@ -466,3 +466,249 @@ export function buildTopMetricRanking(items, metricKey, topN = 6) {
       label: item.label ?? item.countyName
     }));
 }
+
+export function buildEfficiencyKpis(records, minFundingNok = 0, minPaperCount = 0) {
+  const institutions = new Map();
+  const fundingNok = sumBy(records, (record) => record.fundingNok);
+  const paperCount = sumBy(records, (record) => record.paperCount);
+
+  for (const record of records) {
+    const current = institutions.get(record.institutionId) ?? {
+      fundingNok: 0,
+      paperCount: 0
+    };
+
+    current.fundingNok += record.fundingNok ?? 0;
+    current.paperCount += record.paperCount ?? 0;
+    institutions.set(record.institutionId, current);
+  }
+
+  const rankingEligibleInstitutions = [...institutions.values()].filter(
+    (institution) =>
+      institution.fundingNok >= minFundingNok &&
+      institution.paperCount >= minPaperCount
+  ).length;
+
+  return [
+    {
+      label: "Published papers",
+      value: paperCount,
+      variant: "number"
+    },
+    {
+      label: "Funding in view",
+      value: fundingNok,
+      variant: "currency"
+    },
+    {
+      label: "Papers per MNOK",
+      value: fundingNok > 0 ? paperCount / (fundingNok / 1_000_000) : 0,
+      variant: "decimal"
+    },
+    {
+      label: "Ranking-eligible institutions",
+      value: rankingEligibleInstitutions,
+      variant: "number"
+    }
+  ];
+}
+
+export function buildEfficiencyKpisFromSummary(summary) {
+  return [
+    {
+      label: "Published papers",
+      value: summary?.paperCount ?? 0,
+      variant: "number"
+    },
+    {
+      label: "Matched institutions",
+      value: summary?.matchedInstitutionCount ?? 0,
+      variant: "number"
+    },
+    {
+      label: "Funding in view",
+      value: summary?.fundingNok ?? 0,
+      variant: "currency"
+    },
+    {
+      label: "Papers per MNOK",
+      value: summary?.papersPerMnok ?? 0,
+      variant: "decimal"
+    }
+  ];
+}
+
+export function buildEfficiencyCountySeries(records, countyOptions) {
+  const countyLabelMap = buildOptionLabelMap(countyOptions);
+  const countyMap = new Map(
+    countyOptions.map((county) => [
+      county.id,
+      {
+        citationCount: 0,
+        citationsPerMnok: 0,
+        countyId: county.id,
+        countyName: county.label,
+        fundingNok: 0,
+        institutionCount: 0,
+        paperCount: 0,
+        papersPerMnok: 0
+      }
+    ])
+  );
+  const countyInstitutionSets = new Map(
+    countyOptions.map((county) => [county.id, new Set()])
+  );
+
+  for (const record of records) {
+    const current = countyMap.get(record.countyId) ?? {
+      citationCount: 0,
+      citationsPerMnok: 0,
+      countyId: record.countyId,
+      countyName: countyLabelMap[record.countyId] ?? record.countyId,
+      fundingNok: 0,
+      institutionCount: 0,
+      paperCount: 0,
+      papersPerMnok: 0
+    };
+
+    current.paperCount += record.paperCount ?? 0;
+    current.citationCount += record.citationCount ?? 0;
+    current.fundingNok += record.fundingNok ?? 0;
+    countyMap.set(record.countyId, current);
+
+    if (record.countyId && record.institutionId) {
+      const institutionSet = countyInstitutionSets.get(record.countyId) ?? new Set();
+      institutionSet.add(record.institutionId);
+      countyInstitutionSets.set(record.countyId, institutionSet);
+    }
+  }
+
+  return [...countyMap.values()]
+    .map((item) => ({
+      ...item,
+      citationsPerMnok:
+        item.fundingNok > 0 ? item.citationCount / (item.fundingNok / 1_000_000) : 0,
+      institutionCount: countyInstitutionSets.get(item.countyId)?.size ?? 0,
+      papersPerMnok:
+        item.fundingNok > 0 ? item.paperCount / (item.fundingNok / 1_000_000) : 0
+    }))
+    .sort((left, right) => right.papersPerMnok - left.papersPerMnok);
+}
+
+export function buildEfficiencyCountySeriesFromAggregate(aggregates, countyOptions) {
+  const merged = buildEfficiencyCountySeries([], countyOptions);
+  const mergedMap = new Map(merged.map((item) => [item.countyId, item]));
+
+  for (const item of aggregates) {
+    const current = mergedMap.get(item.countyId);
+
+    if (!current) {
+      continue;
+    }
+
+    current.citationCount = item.citationCount;
+    current.citationsPerMnok = item.citationsPerMnok;
+    current.fundingNok = item.fundingNok;
+    current.institutionCount = item.institutionCount;
+    current.paperCount = item.paperCount;
+    current.papersPerMnok = item.papersPerMnok;
+  }
+
+  return [...mergedMap.values()].sort(
+    (left, right) => right.papersPerMnok - left.papersPerMnok
+  );
+}
+
+export function buildEfficiencyTimeseries(records, years) {
+  const yearMap = new Map(
+    years.map((year) => [
+      year,
+      {
+        citationCount: 0,
+        citationsPerMnok: 0,
+        fundingNok: 0,
+        paperCount: 0,
+        papersPerMnok: 0,
+        year
+      }
+    ])
+  );
+
+  for (const record of records) {
+    const current = yearMap.get(record.year);
+
+    if (!current) {
+      continue;
+    }
+
+    current.paperCount += record.paperCount ?? 0;
+    current.citationCount += record.citationCount ?? 0;
+    current.fundingNok += record.fundingNok ?? 0;
+  }
+
+  return [...yearMap.values()]
+    .map((item) => ({
+      ...item,
+      citationsPerMnok:
+        item.fundingNok > 0 ? item.citationCount / (item.fundingNok / 1_000_000) : 0,
+      papersPerMnok:
+        item.fundingNok > 0 ? item.paperCount / (item.fundingNok / 1_000_000) : 0
+    }))
+    .sort((left, right) => left.year - right.year);
+}
+
+export function buildEfficiencyInstitutionRankings(
+  records,
+  minFundingNok,
+  minPaperCount
+) {
+  const buckets = new Map();
+
+  for (const record of records) {
+    const current = buckets.get(record.institutionId) ?? {
+      citationCount: 0,
+      citationsPerMnok: 0,
+      countyId: record.countyId,
+      countyName: record.countyName,
+      fundingNok: 0,
+      id: record.institutionId,
+      label: record.institutionName,
+      matchedBy: record.matchedBy,
+      paperCount: 0,
+      papersPerMnok: 0,
+      rankingEligible: false
+    };
+
+    current.paperCount += record.paperCount ?? 0;
+    current.citationCount += record.citationCount ?? 0;
+    current.fundingNok += record.fundingNok ?? 0;
+    current.papersPerMnok =
+      current.fundingNok > 0 ? current.paperCount / (current.fundingNok / 1_000_000) : 0;
+    current.citationsPerMnok =
+      current.fundingNok > 0 ? current.citationCount / (current.fundingNok / 1_000_000) : 0;
+    current.rankingEligible =
+      current.fundingNok >= minFundingNok && current.paperCount >= minPaperCount;
+    buckets.set(record.institutionId, current);
+  }
+
+  return [...buckets.values()]
+    .filter((item) => item.rankingEligible)
+    .sort((left, right) => right.papersPerMnok - left.papersPerMnok)
+    .slice(0, 6);
+}
+
+export function buildEfficiencyInstitutionRankingsFromAggregate(
+  aggregates,
+  minFundingNok,
+  minPaperCount
+) {
+  return [...aggregates]
+    .filter(
+      (item) =>
+        item.fundingNok >= minFundingNok &&
+        item.paperCount >= minPaperCount &&
+        item.rankingEligible !== false
+    )
+    .sort((left, right) => right.papersPerMnok - left.papersPerMnok)
+    .slice(0, 6);
+}

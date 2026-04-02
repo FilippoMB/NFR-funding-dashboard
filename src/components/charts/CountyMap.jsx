@@ -82,6 +82,7 @@ export default function CountyMap({
   onSelectCounty,
   secondaryKey = null,
   secondaryLabel = "",
+  secondaryVariant = "number",
   valueKey = "totalFundingNok",
   valueVariant = "currency"
 }) {
@@ -159,7 +160,7 @@ export default function CountyMap({
               {county.countyName}: {formatMetricValue(county[valueKey] ?? 0, valueVariant)}
               {countKey ? `, ${formatNumber(county[countKey] ?? 0)} ${countLabel}` : ""}
               {secondaryKey
-                ? `, ${formatNumber(county[secondaryKey] ?? 0)} ${secondaryLabel}`
+                ? `, ${formatMetricValue(county[secondaryKey] ?? 0, secondaryVariant)} ${secondaryLabel}`
                 : ""}
             </title>
           </path>

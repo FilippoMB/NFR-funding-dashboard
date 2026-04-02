@@ -384,6 +384,11 @@ def resolve_institution_county(institution: dict[str, Any]) -> tuple[str | None,
 def normalize_institution(institution: dict[str, Any]) -> dict[str, Any]:
     institution_id = extract_openalex_key(clean_text(institution.get("id")))
     institution_name = clean_text(institution.get("display_name")) or institution_id
+    acronyms = [
+        clean_text(value)
+        for value in (institution.get("display_name_acronyms") or [])
+        if clean_text(value)
+    ]
     county_id, county_name, mapping_source = resolve_institution_county(institution)
     counts_by_year = institution.get("counts_by_year") or []
     geo = institution.get("geo") or {}
@@ -435,6 +440,7 @@ def normalize_institution(institution: dict[str, Any]) -> dict[str, Any]:
         "countryCode": clean_text(geo.get("country_code")),
         "countyId": county_id,
         "countyName": county_name,
+        "acronyms": acronyms,
         "hIndex": int(summary_stats.get("h_index") or 0),
         "i10Index": int(summary_stats.get("i10_index") or 0),
         "id": institution_id,
@@ -489,6 +495,7 @@ def aggregate(institutions: list[dict[str, Any]], source_label: str) -> dict[str
                 "citationsPerPaper": institution["citationsPerPaper"],
                 "countyId": institution["countyId"],
                 "countyName": institution["countyName"],
+                "acronyms": institution["acronyms"],
                 "hIndex": institution["hIndex"],
                 "i10Index": institution["i10Index"],
                 "id": institution["id"],
@@ -593,6 +600,7 @@ def aggregate(institutions: list[dict[str, Any]], source_label: str) -> dict[str
                     "city": institution["city"],
                     "countyId": institution["countyId"],
                     "countyName": institution["countyName"],
+                    "acronyms": institution["acronyms"],
                     "hIndex": institution["hIndex"],
                     "i10Index": institution["i10Index"],
                     "id": institution["id"],

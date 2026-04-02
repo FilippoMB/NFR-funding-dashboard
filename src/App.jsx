@@ -17,6 +17,13 @@ import {
   buildCountySeriesFromAggregate,
   buildDimensionRankings,
   buildDimensionRankingsFromAggregate,
+  buildEfficiencyCountySeries,
+  buildEfficiencyCountySeriesFromAggregate,
+  buildEfficiencyInstitutionRankings,
+  buildEfficiencyInstitutionRankingsFromAggregate,
+  buildEfficiencyKpis,
+  buildEfficiencyKpisFromSummary,
+  buildEfficiencyTimeseries,
   buildFundingKpisFromSummary,
   buildImpactCountySeries,
   buildImpactCountySeriesFromAggregate,
@@ -32,12 +39,17 @@ import {
   filterCubeRecords,
   isDefaultFilter
 } from "./lib/dashboard";
-import { formatDecimal, formatNumber } from "./lib/formatters";
+import {
+  formatCompactCurrency,
+  formatDecimal,
+  formatNumber
+} from "./lib/formatters";
 
 const AllocationPieChart = lazy(() => import("./components/charts/AllocationPieChart"));
 
 const MODE_FUNDING = "funding";
 const MODE_IMPACT = "impact";
+const MODE_EFFICIENCY = "efficiency";
 
 const FILTER_CONFIGS = {
   [MODE_FUNDING]: [
@@ -45,7 +57,8 @@ const FILTER_CONFIGS = {
     { key: "schemeId", label: "Funding Scheme", optionsKey: "schemes" },
     { key: "subjectId", label: "Subject Field", optionsKey: "subjects" }
   ],
-  [MODE_IMPACT]: [{ key: "countyId", label: "County", optionsKey: "counties" }]
+  [MODE_IMPACT]: [{ key: "countyId", label: "County", optionsKey: "counties" }],
+  [MODE_EFFICIENCY]: [{ key: "countyId", label: "County", optionsKey: "counties" }]
 };
 
 const DEFAULT_FILTERS = {
@@ -60,7 +73,7 @@ function buildDataUrl(path) {
 }
 
 function normalizeFiltersForMode(filters, mode) {
-  if (mode === MODE_IMPACT) {
+  if (mode === MODE_IMPACT || mode === MODE_EFFICIENCY) {
     return {
       ...filters,
       schemeId: ALL_FILTER_VALUE,
@@ -158,14 +171,57 @@ function buildImpactHighlights({
   ];
 }
 
+function buildEfficiencyHighlights({
+  activeCountyId,
+  countySeries,
+  rankings,
+  selectedCounty,
+  timeseries
+}) {
+  const leadCounty = countySeries.find((item) => item.papersPerMnok > 0) ?? null;
+  const peakYear =
+    timeseries.length > 0
+      ? timeseries.reduce((best, current) =>
+          current.papersPerMnok > best.papersPerMnok ? current : best
+        )
+      : null;
+  const leadInstitution = rankings.institutions[0] ?? null;
+
+  return [
+    {
+      label: activeCountyId ? "Selected county" : "Most efficient county",
+      value: (selectedCounty ?? leadCounty)?.countyName ?? "No data",
+      meta:
+        selectedCounty ?? leadCounty
+          ? `${formatDecimal((selectedCounty ?? leadCounty).papersPerMnok)} papers per MNOK`
+          : "No efficiency value"
+    },
+    {
+      label: "Peak efficiency year",
+      value: peakYear ? String(peakYear.year) : "No data",
+      meta: peakYear ? `${formatDecimal(peakYear.papersPerMnok)} papers per MNOK` : "No annual series"
+    },
+    {
+      label: "Top institution",
+      value: leadInstitution?.label ?? "No data",
+      meta: leadInstitution
+        ? `${formatDecimal(leadInstitution.papersPerMnok)} papers per MNOK`
+        : "No institution ranking"
+    }
+  ];
+}
+
 export default function App() {
   const [mode, setMode] = useState(MODE_FUNDING);
   const [fundingData, setFundingData] = useState(null);
   const [impactData, setImpactData] = useState(null);
+  const [efficiencyData, setEfficiencyData] = useState(null);
   const [fundingInstitutionCubeStatus, setFundingInstitutionCubeStatus] = useState("idle");
   const [impactInstitutionCubeStatus, setImpactInstitutionCubeStatus] = useState("idle");
+  const [efficiencyInstitutionCubeStatus, setEfficiencyInstitutionCubeStatus] = useState("idle");
   const [fundingStatus, setFundingStatus] = useState({ type: "loading", message: "" });
   const [impactStatus, setImpactStatus] = useState({ type: "idle", message: "" });
+  const [efficiencyStatus, setEfficiencyStatus] = useState({ type: "idle", message: "" });
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
@@ -354,8 +410,105 @@ export default function App() {
     void loadImpactInstitutionCube();
   }, [impactData, impactInstitutionCubeStatus, mode]);
 
-  const currentData = mode === MODE_FUNDING ? fundingData : impactData;
-  const activeStatus = mode === MODE_FUNDING ? fundingStatus : impactStatus;
+  useEffect(() => {
+    if (
+      mode !== MODE_EFFICIENCY ||
+      efficiencyData ||
+      efficiencyStatus.type === "loading"
+    ) {
+      return;
+    }
+
+    async function loadEfficiencyData() {
+      try {
+        setEfficiencyStatus({ type: "loading", message: "" });
+        const responses = await Promise.all([
+          fetch(buildDataUrl("data/efficiency/summary.json")),
+          fetch(buildDataUrl("data/efficiency/by_county.json")),
+          fetch(buildDataUrl("data/efficiency/timeseries.json")),
+          fetch(buildDataUrl("data/efficiency/by_institution.json"))
+        ]);
+
+        for (const response of responses) {
+          if (!response.ok) {
+            throw new Error(`Efficiency asset load failed with ${response.status}.`);
+          }
+        }
+
+        const [summary, byCounty, timeseries, byInstitution] = await Promise.all(
+          responses.map((response) => response.json())
+        );
+
+        setEfficiencyData({
+          byCounty,
+          byInstitution,
+          institutionCube: null,
+          summary,
+          timeseries
+        });
+        setEfficiencyInstitutionCubeStatus("idle");
+        setEfficiencyStatus({ type: "ready", message: "" });
+      } catch (error) {
+        setEfficiencyStatus({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "The efficiency dataset could not be loaded."
+        });
+      }
+    }
+
+    void loadEfficiencyData();
+  }, [efficiencyData, efficiencyStatus.type, mode]);
+
+  useEffect(() => {
+    if (
+      mode !== MODE_EFFICIENCY ||
+      !efficiencyData ||
+      efficiencyData.institutionCube ||
+      efficiencyInstitutionCubeStatus === "loading" ||
+      efficiencyInstitutionCubeStatus === "ready"
+    ) {
+      return;
+    }
+
+    async function loadEfficiencyInstitutionCube() {
+      try {
+        setEfficiencyInstitutionCubeStatus("loading");
+        const response = await fetch(buildDataUrl("data/efficiency/institution_cube.json"));
+
+        if (!response.ok) {
+          throw new Error(`Efficiency asset load failed with ${response.status}.`);
+        }
+
+        const institutionCube = await response.json();
+
+        setEfficiencyData((current) =>
+          current ? { ...current, institutionCube } : current
+        );
+        setEfficiencyInstitutionCubeStatus("ready");
+      } catch (error) {
+        setEfficiencyInstitutionCubeStatus("error");
+        console.error("Efficiency institution cube could not be loaded.", error);
+      }
+    }
+
+    void loadEfficiencyInstitutionCube();
+  }, [efficiencyData, efficiencyInstitutionCubeStatus, mode]);
+
+  const currentData =
+    mode === MODE_FUNDING
+      ? fundingData
+      : mode === MODE_IMPACT
+        ? impactData
+        : efficiencyData;
+  const activeStatus =
+    mode === MODE_FUNDING
+      ? fundingStatus
+      : mode === MODE_IMPACT
+        ? impactStatus
+        : efficiencyStatus;
   const availableFilters = currentData?.summary.filters ?? {
     counties: [],
     schemes: [],
@@ -363,6 +516,16 @@ export default function App() {
     years: []
   };
   const usingDefaultFilters = isDefaultFilter(deferredFilters);
+  const impactDetailReady =
+    usingDefaultFilters ||
+    !impactData ||
+    !!impactData.institutionCube ||
+    impactInstitutionCubeStatus === "ready";
+  const efficiencyDetailReady =
+    usingDefaultFilters ||
+    !efficiencyData ||
+    !!efficiencyData.institutionCube ||
+    efficiencyInstitutionCubeStatus === "ready";
 
   const fundingFilteredCube = fundingData
     ? filterCubeRecords(fundingData.cube, deferredFilters)
@@ -432,12 +595,19 @@ export default function App() {
           impactData.byCounty,
           impactData.summary.filters.counties
         )
-      : buildImpactCountySeries(impactFilteredCube, impactData.summary.filters.counties)
+      : impactDetailReady
+        ? buildImpactCountySeries(impactFilteredCube, impactData.summary.filters.counties)
+        : buildImpactCountySeriesFromAggregate(
+            impactData.byCounty,
+            impactData.summary.filters.counties
+          )
     : [];
   const impactTimeseries = impactData
     ? usingDefaultFilters
       ? impactData.timeseries
-      : buildImpactTimeseries(impactFilteredCube, impactData.summary.filters.years)
+      : impactDetailReady
+        ? buildImpactTimeseries(impactFilteredCube, impactData.summary.filters.years)
+        : impactData.timeseries
     : [];
   const impactYearAgnosticTimeseries = impactData
     ? isDefaultFilter(impactYearAgnosticFilters)
@@ -450,12 +620,88 @@ export default function App() {
   const impactInstitutionRankings = impactData
     ? usingDefaultFilters
       ? buildImpactInstitutionRankingsFromAggregate(impactData.byInstitution)
-      : buildImpactInstitutionRankings(impactFilteredCube)
+      : impactDetailReady
+        ? buildImpactInstitutionRankings(impactFilteredCube)
+        : buildImpactInstitutionRankingsFromAggregate(impactData.byInstitution)
     : [];
   const impactKpis = impactData
     ? usingDefaultFilters
       ? buildImpactKpisFromSummary(impactData.summary)
-      : buildImpactKpis(impactFilteredCube)
+      : impactDetailReady
+        ? buildImpactKpis(impactFilteredCube)
+        : buildImpactKpisFromSummary(impactData.summary)
+    : [];
+
+  const efficiencyFilteredCube = efficiencyData
+    ? filterCubeRecords(efficiencyData.institutionCube ?? [], deferredFilters)
+    : [];
+  const efficiencyYearAgnosticFilters = { ...deferredFilters, year: ALL_FILTER_VALUE };
+  const efficiencyYearAgnosticCube = efficiencyData
+    ? filterCubeRecords(efficiencyData.institutionCube ?? [], efficiencyYearAgnosticFilters)
+    : [];
+  const efficiencyCountySeries = efficiencyData
+    ? usingDefaultFilters
+      ? buildEfficiencyCountySeriesFromAggregate(
+          efficiencyData.byCounty,
+          efficiencyData.summary.filters.counties
+        )
+      : efficiencyDetailReady
+        ? buildEfficiencyCountySeries(
+            efficiencyFilteredCube,
+            efficiencyData.summary.filters.counties
+          )
+        : buildEfficiencyCountySeriesFromAggregate(
+            efficiencyData.byCounty,
+            efficiencyData.summary.filters.counties
+          )
+    : [];
+  const efficiencyTimeseries = efficiencyData
+    ? usingDefaultFilters
+      ? efficiencyData.timeseries
+      : efficiencyDetailReady
+        ? buildEfficiencyTimeseries(
+            efficiencyFilteredCube,
+            efficiencyData.summary.filters.years
+          )
+        : efficiencyData.timeseries
+    : [];
+  const efficiencyYearAgnosticTimeseries = efficiencyData
+    ? isDefaultFilter(efficiencyYearAgnosticFilters)
+      ? efficiencyData.timeseries
+      : buildEfficiencyTimeseries(
+          efficiencyYearAgnosticCube,
+          efficiencyData.summary.filters.years
+        )
+    : [];
+  const efficiencyInstitutionRankings = efficiencyData
+    ? usingDefaultFilters
+      ? buildEfficiencyInstitutionRankingsFromAggregate(
+          efficiencyData.byInstitution,
+          efficiencyData.summary.minFundingNokForRanking,
+          efficiencyData.summary.minPaperCountForRanking
+        )
+      : efficiencyDetailReady
+        ? buildEfficiencyInstitutionRankings(
+            efficiencyFilteredCube,
+            efficiencyData.summary.minFundingNokForRanking,
+            efficiencyData.summary.minPaperCountForRanking
+          )
+        : buildEfficiencyInstitutionRankingsFromAggregate(
+            efficiencyData.byInstitution,
+            efficiencyData.summary.minFundingNokForRanking,
+            efficiencyData.summary.minPaperCountForRanking
+          )
+    : [];
+  const efficiencyKpis = efficiencyData
+    ? usingDefaultFilters
+      ? buildEfficiencyKpisFromSummary(efficiencyData.summary)
+      : efficiencyDetailReady
+        ? buildEfficiencyKpis(
+            efficiencyFilteredCube,
+            efficiencyData.summary.minFundingNokForRanking,
+            efficiencyData.summary.minPaperCountForRanking
+          )
+        : buildEfficiencyKpisFromSummary(efficiencyData.summary)
     : [];
 
   const activeCountyId =
@@ -463,16 +709,33 @@ export default function App() {
       ? null
       : deferredFilters.countyId;
 
-  const countySeries = mode === MODE_FUNDING ? fundingCountySeries : impactCountySeries;
-  const timeseries = mode === MODE_FUNDING ? fundingTimeseries : impactTimeseries;
+  const countySeries =
+    mode === MODE_FUNDING
+      ? fundingCountySeries
+      : mode === MODE_IMPACT
+        ? impactCountySeries
+        : efficiencyCountySeries;
+  const timeseries =
+    mode === MODE_FUNDING
+      ? fundingTimeseries
+      : mode === MODE_IMPACT
+        ? impactTimeseries
+        : efficiencyTimeseries;
   const contextualMax =
     mode === MODE_FUNDING
       ? Math.max(
           ...fundingYearAgnosticTimeseries.map((item) => item.totalFundingNok),
           1
         )
-      : Math.max(...impactYearAgnosticTimeseries.map((item) => item.paperCount), 1);
-  const kpis = mode === MODE_FUNDING ? fundingKpis : impactKpis;
+      : mode === MODE_IMPACT
+        ? Math.max(...impactYearAgnosticTimeseries.map((item) => item.paperCount), 1)
+        : Math.max(...efficiencyYearAgnosticTimeseries.map((item) => item.papersPerMnok), 1);
+  const kpis =
+    mode === MODE_FUNDING
+      ? fundingKpis
+      : mode === MODE_IMPACT
+        ? impactKpis
+        : efficiencyKpis;
   const selectedCounty =
     (activeCountyId
       ? countySeries.find((item) => item.countyId === activeCountyId)
@@ -490,13 +753,21 @@ export default function App() {
           selectedCounty,
           timeseries: fundingTimeseries
         })
-      : buildImpactHighlights({
-          activeCountyId,
-          countySeries: impactCountySeries,
-          rankings: { institutions: impactInstitutionRankings },
-          selectedCounty,
-          timeseries: impactTimeseries
-        });
+      : mode === MODE_IMPACT
+        ? buildImpactHighlights({
+            activeCountyId,
+            countySeries: impactCountySeries,
+            rankings: { institutions: impactInstitutionRankings },
+            selectedCounty,
+            timeseries: impactTimeseries
+          })
+        : buildEfficiencyHighlights({
+            activeCountyId,
+            countySeries: efficiencyCountySeries,
+            rankings: { institutions: efficiencyInstitutionRankings },
+            selectedCounty,
+            timeseries: efficiencyTimeseries
+          });
 
   const topImpactCountiesByPapers = buildTopMetricRanking(impactCountySeries, "paperCount");
   const topImpactCountiesByCitations = buildTopMetricRanking(
@@ -532,9 +803,26 @@ export default function App() {
     });
   }
 
-  const currentRecords = mode === MODE_FUNDING ? fundingFilteredCube : impactFilteredCube;
+  const currentRecords =
+    mode === MODE_FUNDING
+      ? fundingFilteredCube
+      : mode === MODE_IMPACT
+        ? impactFilteredCube
+        : efficiencyFilteredCube;
+  const detailSlicePending =
+    activeStatus.type === "ready" &&
+    !usingDefaultFilters &&
+    ((mode === MODE_IMPACT &&
+      !impactDetailReady &&
+      impactInstitutionCubeStatus !== "error") ||
+      (mode === MODE_EFFICIENCY &&
+        !efficiencyDetailReady &&
+        efficiencyInstitutionCubeStatus !== "error"));
   const showNoMatch =
-    activeStatus.type === "ready" && !usingDefaultFilters && currentRecords.length === 0;
+    activeStatus.type === "ready" &&
+    !detailSlicePending &&
+    !usingDefaultFilters &&
+    currentRecords.length === 0;
 
   const modeCopy = {
     [MODE_FUNDING]: {
@@ -601,6 +889,50 @@ export default function App() {
       seriesCopy: "The curve tracks papers published across the selected slice.",
       seriesTitle: "Annual publication activity",
       sourceLabel: impactData?.summary?.source?.label ?? "OpenAlex institutions API"
+    },
+    [MODE_EFFICIENCY]: {
+      leadPanelCopy:
+        `Efficiency is published papers per MNOK of NFR funding over the overlapping ${
+          efficiencyData?.summary?.overlapYearStart ?? "2010"
+        }-${efficiencyData?.summary?.latestYear ?? "2026"} window.`,
+      leadPanelTitle: "Research efficiency by county",
+      pies: [
+        {
+          emptyLabel: "No county efficiency visible",
+          items: buildTopMetricRanking(efficiencyCountySeries, "papersPerMnok"),
+          title: "Top Counties by Papers/MNOK",
+          valueKey: "papersPerMnok",
+          valueVariant: "decimal"
+        },
+        {
+          emptyLabel: "No matched funding visible",
+          items: buildTopMetricRanking(efficiencyCountySeries, "fundingNok"),
+          title: "Counties with Largest Matched Funding",
+          valueKey: "fundingNok",
+          valueVariant: "currency"
+        }
+      ],
+      ranking: {
+        emptyLabel:
+          "No institution efficiency values are available for the current filter combination.",
+        items: efficiencyInstitutionRankings,
+        metaRenderer: (item) =>
+          `${formatNumber(item.paperCount)} papers · ${formatCompactCurrency(
+            item.fundingNok
+          )} matched funding`,
+        subtitle: `Institutions ranked by published papers per MNOK received. Rankings require at least ${
+          efficiencyData?.summary?.minPaperCountForRanking ?? 10
+        } papers and ${formatCompactCurrency(
+          efficiencyData?.summary?.minFundingNokForRanking ?? 10_000_000
+        )} in matched funding.`,
+        title: "Most Efficient Institutions",
+        valueKey: "papersPerMnok",
+        valueVariant: "decimal"
+      },
+      seriesCopy: "The curve tracks published papers per MNOK across the selected slice.",
+      seriesTitle: "Annual efficiency",
+      sourceLabel:
+        efficiencyData?.summary?.source?.label ?? "Joined funding + OpenAlex efficiency dataset"
     }
   }[mode];
 
@@ -629,14 +961,21 @@ export default function App() {
             >
               Funding
             </button>
-            <button
-              className={`mode-toggle-button${mode === MODE_IMPACT ? " is-active" : ""}`}
-              onClick={() => switchMode(MODE_IMPACT)}
-              type="button"
-            >
-              Impact
-            </button>
-          </div>
+          <button
+            className={`mode-toggle-button${mode === MODE_IMPACT ? " is-active" : ""}`}
+            onClick={() => switchMode(MODE_IMPACT)}
+            type="button"
+          >
+            Impact
+          </button>
+          <button
+            className={`mode-toggle-button${mode === MODE_EFFICIENCY ? " is-active" : ""}`}
+            onClick={() => switchMode(MODE_EFFICIENCY)}
+            type="button"
+          >
+            Efficiency
+          </button>
+        </div>
 
           <FilterBar
             activeFilters={deferredFilters}
@@ -661,12 +1000,25 @@ export default function App() {
         ) : null}
 
         {activeStatus.type === "loading" || activeStatus.type === "idle" ? (
+              <section className="status-panel">
+                <h2>Loading Dashboard Assets...</h2>
+                <p>
+                  {mode === MODE_FUNDING
+                    ? "Fetching funding JSON bundles and county geometry"
+                    : mode === MODE_IMPACT
+                      ? "Fetching OpenAlex impact bundles"
+                      : "Fetching joined efficiency bundles"}
+                </p>
+              </section>
+        ) : null}
+
+        {activeStatus.type === "ready" && detailSlicePending ? (
           <section className="status-panel">
-            <h2>Loading Dashboard Assets...</h2>
+            <h2>Applying Filters</h2>
             <p>
-              {mode === MODE_FUNDING
-                ? "Fetching funding JSON bundles and county geometry"
-                : "Fetching OpenAlex impact bundles"}
+              Fetching institution-level records for the selected filters. The
+              page stays visible using the overview bundle until the detailed{" "}
+              {mode === MODE_EFFICIENCY ? "efficiency" : "impact"} slice is ready.
             </p>
           </section>
         ) : null}
@@ -685,15 +1037,44 @@ export default function App() {
                     ariaLabel={
                       mode === MODE_FUNDING
                         ? "County-level choropleth of Norwegian funding allocations"
-                        : "County-level choropleth of Norwegian publication activity"
+                        : mode === MODE_IMPACT
+                          ? "County-level choropleth of Norwegian publication activity"
+                          : "County-level choropleth of Norwegian research efficiency"
                     }
-                    countKey={mode === MODE_FUNDING ? "projectCount" : "citationCount"}
-                    countLabel={mode === MODE_FUNDING ? "projects" : "citations"}
+                    countKey={
+                      mode === MODE_FUNDING
+                        ? "projectCount"
+                        : mode === MODE_IMPACT
+                          ? "citationCount"
+                          : "paperCount"
+                    }
+                    countLabel={
+                      mode === MODE_FUNDING
+                        ? "projects"
+                        : mode === MODE_IMPACT
+                          ? "citations"
+                          : "papers"
+                    }
                     data={countySeries}
                     geojson={fundingData?.countyGeojson}
                     onSelectCounty={selectCounty}
-                    valueKey={mode === MODE_FUNDING ? "totalFundingNok" : "paperCount"}
-                    valueVariant={mode === MODE_FUNDING ? "currency" : "number"}
+                    secondaryKey={mode === MODE_EFFICIENCY ? "fundingNok" : null}
+                    secondaryLabel={mode === MODE_EFFICIENCY ? "NOK funding" : ""}
+                    secondaryVariant={mode === MODE_EFFICIENCY ? "currency" : "number"}
+                    valueKey={
+                      mode === MODE_FUNDING
+                        ? "totalFundingNok"
+                        : mode === MODE_IMPACT
+                          ? "paperCount"
+                          : "papersPerMnok"
+                    }
+                    valueVariant={
+                      mode === MODE_FUNDING
+                        ? "currency"
+                        : mode === MODE_IMPACT
+                          ? "number"
+                          : "decimal"
+                    }
                   />
                 </div>
               </div>
@@ -711,14 +1092,43 @@ export default function App() {
                     ariaLabel={
                       mode === MODE_FUNDING
                         ? "Funding by year"
-                        : "Publication activity by year"
+                        : mode === MODE_IMPACT
+                          ? "Publication activity by year"
+                          : "Efficiency by year"
                     }
-                    countKey={mode === MODE_FUNDING ? "projectCount" : "citationCount"}
-                    countLabel={mode === MODE_FUNDING ? "projects" : "citations"}
+                    countKey={
+                      mode === MODE_FUNDING
+                        ? "projectCount"
+                        : mode === MODE_IMPACT
+                          ? "citationCount"
+                          : "paperCount"
+                    }
+                    countLabel={
+                      mode === MODE_FUNDING
+                        ? "projects"
+                        : mode === MODE_IMPACT
+                          ? "citations"
+                          : "papers"
+                    }
                     data={timeseries}
                     globalMax={contextualMax}
-                    valueKey={mode === MODE_FUNDING ? "totalFundingNok" : "paperCount"}
-                    valueVariant={mode === MODE_FUNDING ? "currency" : "number"}
+                    secondaryKey={mode === MODE_EFFICIENCY ? "fundingNok" : null}
+                    secondaryLabel={mode === MODE_EFFICIENCY ? "NOK funding" : ""}
+                    secondaryVariant={mode === MODE_EFFICIENCY ? "currency" : "number"}
+                    valueKey={
+                      mode === MODE_FUNDING
+                        ? "totalFundingNok"
+                        : mode === MODE_IMPACT
+                          ? "paperCount"
+                          : "papersPerMnok"
+                    }
+                    valueVariant={
+                      mode === MODE_FUNDING
+                        ? "currency"
+                        : mode === MODE_IMPACT
+                          ? "number"
+                          : "decimal"
+                    }
                   />
                 </div>
 
@@ -767,7 +1177,11 @@ export default function App() {
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div className="panel-heading">
                 <h2>
-                  {mode === MODE_FUNDING ? "Allocation Breakdowns" : "Impact Breakdowns"}
+                  {mode === MODE_FUNDING
+                    ? "Allocation Breakdowns"
+                    : mode === MODE_IMPACT
+                      ? "Impact Breakdowns"
+                      : "Efficiency Rankings"}
                 </h2>
               </div>
 
@@ -775,15 +1189,12 @@ export default function App() {
                 <div className="ranking-panel">
                   {(mode === MODE_FUNDING &&
                     !usingDefaultFilters &&
-                    fundingInstitutionCubeStatus === "loading") ||
-                  (mode === MODE_IMPACT &&
-                    !usingDefaultFilters &&
-                    impactInstitutionCubeStatus === "loading") ? (
+                    fundingInstitutionCubeStatus === "loading") ? (
                     <section className="ranking-panel">
                       <div className="panel-heading">
                         <div>
                           <p className="eyebrow">Ranked allocation</p>
-                          <h2>Top Institutions</h2>
+                          <h2>{modeCopy.ranking.title}</h2>
                         </div>
                       </div>
                       <div className="empty-panel">

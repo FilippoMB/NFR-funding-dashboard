@@ -106,9 +106,9 @@ p { margin: 0; }
 
 .mode-toggle {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  padding: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
   border: 1px solid var(--color-border);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
@@ -117,13 +117,18 @@ p { margin: 0; }
 .mode-toggle-button {
   border: 0;
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 8px 4px;
   background: transparent;
   color: var(--color-text-secondary);
   font: inherit;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 
 .mode-toggle-button:hover {

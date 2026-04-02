@@ -10,6 +10,8 @@ Run everything from the repository root:
 npm install
 npm run data:build
 npm run data:build:mock
+npm run impact:build
+npm run efficiency:build
 npm run dev
 npm run build
 ```
@@ -21,7 +23,7 @@ uv venv .venv
 source .venv/bin/activate
 ```
 
-`data/aggregate_funding.py` is stdlib-only today, so no extra Python packages are required.
+`data/aggregate_funding.py`, `data/aggregate_impact.py`, and `data/aggregate_efficiency.py` are stdlib-only today, so no extra Python packages are required.
 
 ## Local Environment Policy
 Install tools and Python dependencies locally in this folder whenever possible. Prefer a project-local virtual environment at `.venv/` managed by `uv`. Do not install Python packages globally with `pip`, and do not create ad hoc environments outside the repository unless the user explicitly asks for a shared `micromamba` environment under the home directory. Minimize writes outside the repo; if a command would use a global cache or system path, prefer a repo-local alternative.
@@ -33,7 +35,7 @@ The dashboard must remain deployable as a static GitHub Pages site. Keep Vite’
 Use ASCII by default. Follow the existing React + plain CSS style already present in `src/`. Keep data-contract field names stable across `data/aggregate_funding.py` and the frontend helpers in `src/lib/dashboard.js`; most regressions in this repo come from mismatches between generated JSON and UI expectations.
 
 ## Testing Guidelines
-Validate changes with `npm run data:build` and `npm run build`. If you touch deployment, inspect `.github/workflows/ci.yml` and `.github/workflows/deploy.yml` together. If you change aggregation logic, verify totals in `summary.json`, `funding_by_county.json`, and the filtered UI still agree.
+Validate changes with the relevant pipeline steps and `npm run build`. If you touch deployment, inspect `.github/workflows/ci.yml` and `.github/workflows/deploy.yml` together. If you change aggregation logic, verify the generated `summary.json` files in `public/data/`, `public/data/impact/`, and `public/data/efficiency/` still agree with the filtered UI.
 
 ## Commit & Pull Request Guidelines
 Recent history uses short imperative subjects. Keep commits focused, for example `Fix county ID mapping for live data` or `Add GitHub Pages CI workflow`. Pull requests should include:
@@ -41,7 +43,7 @@ Recent history uses short imperative subjects. Keep commits focused, for example
 - a brief summary of the change
 - the data source or contract affected
 - screenshots for UI changes
-- the commands run locally (`npm run data:build`, `npm run build`)
+- the commands run locally (`npm run data:build`, `npm run impact:build`, `npm run efficiency:build`, `npm run build`)
 
 ## Data Notes
-Preserve the caveats already documented in [inital-research.md](/Users/filippo/Projects/Github/NFR-funding-stats/inital-research.md): institution counts reflect the project owner, thematic categories may overlap, and the dashboard currently uses project start year rather than annual disbursement.
+Preserve the caveats already documented in [inital-research.md](/Users/filippo/Projects/Github/NFR-funding-stats/inital-research.md): institution counts reflect the project owner, thematic categories may overlap, impact data comes from OpenAlex institution-level yearly counts, and efficiency mode compares papers per MNOK only over years shared by both sources.

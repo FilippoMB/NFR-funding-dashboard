@@ -66,6 +66,12 @@ export OPENALEX_EMAIL=<your-email>
 npm run impact:build
 ```
 
+Build the joined efficiency dataset used by the `Efficiency` mode:
+
+```sh
+npm run efficiency:build
+```
+
 Create a production build:
 
 ```sh
@@ -104,6 +110,17 @@ The OpenAlex impact prototype writes to `public/data/impact/`:
 
 This dataset is derived from OpenAlex institution `counts_by_year`, so it currently covers the last ten years only and uses institution geography to infer Norwegian counties.
 
+The efficiency join writes to `public/data/efficiency/`:
+
+- `summary.json`
+- `by_county.json`
+- `by_institution.json`
+- `timeseries.json`
+- `institution_cube.json`
+- `unmatched_funding_institutions.json`
+
+Efficiency is defined as published papers per MNOK of NFR funding over the overlap window shared by the funding and OpenAlex datasets. Institution rankings are thresholded to reduce small-denominator artifacts.
+
 ## GitHub and deployment
 
 If this local repository was created before the GitHub repo existed, attach the remote once:
@@ -137,6 +154,8 @@ When refreshing the dataset:
 
 ```sh
 npm run data:build
+npm run impact:build
+npm run efficiency:build
 npm run build
 git add public/data
 ```
@@ -155,4 +174,6 @@ git push
 - Institution totals reflect the registered project owner.
 - Subject totals may overlap and should not be summed as independent categories.
 - The dashboard uses project start year, not annual disbursement year.
+- Impact data comes from OpenAlex institution `counts_by_year`, not from NVA.
+- Efficiency rankings use matched institutions only and compare papers per MNOK over the overlap years between funding and impact.
 - County geometry is based on Kartverket-derived data via `robhop/fylker-og-kommuner` under CC BY 4.0.

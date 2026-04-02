@@ -47,6 +47,7 @@ export default function TimeSeriesChart({
   countLabel = "projects",
   secondaryKey = null,
   secondaryLabel = "",
+  secondaryVariant = "number",
   valueKey = "totalFundingNok",
   valueVariant = "currency"
 }) {
@@ -109,7 +110,7 @@ export default function TimeSeriesChart({
             {point.year}: {formatMetricValue(point[valueKey] ?? 0, valueVariant)}
             {countKey ? ` and ${formatNumber(point[countKey] ?? 0)} ${countLabel}` : ""}
             {secondaryKey
-              ? `, ${formatNumber(point[secondaryKey] ?? 0)} ${secondaryLabel}`
+              ? `, ${formatMetricValue(point[secondaryKey] ?? 0, secondaryVariant)} ${secondaryLabel}`
               : ""}
           </title>
         </g>
