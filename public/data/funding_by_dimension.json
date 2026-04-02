@@ -1,0 +1,110 @@
+{
+  "institutions": [
+    {
+      "id": "equinor",
+      "label": "Equinor",
+      "projectCount": 3,
+      "totalFundingNok": 241000000
+    },
+    {
+      "id": "ntnu",
+      "label": "NTNU",
+      "projectCount": 2,
+      "totalFundingNok": 200000000
+    },
+    {
+      "id": "uio",
+      "label": "University of Oslo",
+      "projectCount": 3,
+      "totalFundingNok": 196000000
+    },
+    {
+      "id": "uit",
+      "label": "UiT The Arctic University of Norway",
+      "projectCount": 4,
+      "totalFundingNok": 190000000
+    },
+    {
+      "id": "norce",
+      "label": "NORCE",
+      "projectCount": 4,
+      "totalFundingNok": 142000000
+    },
+    {
+      "id": "uib",
+      "label": "University of Bergen",
+      "projectCount": 2,
+      "totalFundingNok": 137000000
+    }
+  ],
+  "schemes": [
+    {
+      "id": "green-transition",
+      "label": "Green Transition",
+      "projectCount": 6,
+      "totalFundingNok": 374000000
+    },
+    {
+      "id": "enabling-tech",
+      "label": "Enabling Technologies",
+      "projectCount": 5,
+      "totalFundingNok": 353000000
+    },
+    {
+      "id": "health-innovation",
+      "label": "Health Innovation",
+      "projectCount": 6,
+      "totalFundingNok": 288000000
+    },
+    {
+      "id": "ocean-research",
+      "label": "Ocean Research",
+      "projectCount": 4,
+      "totalFundingNok": 253000000
+    },
+    {
+      "id": "regional-innovation",
+      "label": "Regional Innovation",
+      "projectCount": 4,
+      "totalFundingNok": 133000000
+    }
+  ],
+  "subjects": [
+    {
+      "id": "digitalisation",
+      "label": "Digitalisation",
+      "projectCount": 5,
+      "totalFundingNok": 353000000
+    },
+    {
+      "id": "health",
+      "label": "Health",
+      "projectCount": 6,
+      "totalFundingNok": 288000000
+    },
+    {
+      "id": "energy",
+      "label": "Energy",
+      "projectCount": 4,
+      "totalFundingNok": 278000000
+    },
+    {
+      "id": "marine",
+      "label": "Marine Systems",
+      "projectCount": 4,
+      "totalFundingNok": 253000000
+    },
+    {
+      "id": "climate",
+      "label": "Climate and Environment",
+      "projectCount": 4,
+      "totalFundingNok": 174000000
+    },
+    {
+      "id": "social-science",
+      "label": "Social Sciences",
+      "projectCount": 2,
+      "totalFundingNok": 55000000
+    }
+  ]
+}

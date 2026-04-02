@@ -1,0 +1,167 @@
+{
+  "filters": {
+    "counties": [
+      {
+        "id": "agder",
+        "label": "Agder"
+      },
+      {
+        "id": "akershus",
+        "label": "Akershus"
+      },
+      {
+        "id": "buskerud",
+        "label": "Buskerud"
+      },
+      {
+        "id": "finnmark",
+        "label": "Finnmark"
+      },
+      {
+        "id": "innlandet",
+        "label": "Innlandet"
+      },
+      {
+        "id": "more-og-romsdal",
+        "label": "Møre og Romsdal"
+      },
+      {
+        "id": "nordland",
+        "label": "Nordland"
+      },
+      {
+        "id": "oslo",
+        "label": "Oslo"
+      },
+      {
+        "id": "rogaland",
+        "label": "Rogaland"
+      },
+      {
+        "id": "telemark",
+        "label": "Telemark"
+      },
+      {
+        "id": "troms",
+        "label": "Troms"
+      },
+      {
+        "id": "trondelag",
+        "label": "Trøndelag"
+      },
+      {
+        "id": "vestfold",
+        "label": "Vestfold"
+      },
+      {
+        "id": "vestland",
+        "label": "Vestland"
+      },
+      {
+        "id": "ostfold",
+        "label": "Østfold"
+      }
+    ],
+    "institutions": [
+      {
+        "id": "ahus",
+        "label": "Akershus University Hospital"
+      },
+      {
+        "id": "equinor",
+        "label": "Equinor"
+      },
+      {
+        "id": "nmbu",
+        "label": "NMBU"
+      },
+      {
+        "id": "norce",
+        "label": "NORCE"
+      },
+      {
+        "id": "ntnu",
+        "label": "NTNU"
+      },
+      {
+        "id": "sintef",
+        "label": "SINTEF"
+      },
+      {
+        "id": "uit",
+        "label": "UiT The Arctic University of Norway"
+      },
+      {
+        "id": "uib",
+        "label": "University of Bergen"
+      },
+      {
+        "id": "uio",
+        "label": "University of Oslo"
+      }
+    ],
+    "schemes": [
+      {
+        "id": "enabling-tech",
+        "label": "Enabling Technologies"
+      },
+      {
+        "id": "green-transition",
+        "label": "Green Transition"
+      },
+      {
+        "id": "health-innovation",
+        "label": "Health Innovation"
+      },
+      {
+        "id": "ocean-research",
+        "label": "Ocean Research"
+      },
+      {
+        "id": "regional-innovation",
+        "label": "Regional Innovation"
+      }
+    ],
+    "subjects": [
+      {
+        "id": "climate",
+        "label": "Climate and Environment"
+      },
+      {
+        "id": "digitalisation",
+        "label": "Digitalisation"
+      },
+      {
+        "id": "energy",
+        "label": "Energy"
+      },
+      {
+        "id": "health",
+        "label": "Health"
+      },
+      {
+        "id": "marine",
+        "label": "Marine Systems"
+      },
+      {
+        "id": "social-science",
+        "label": "Social Sciences"
+      }
+    ],
+    "years": [
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ]
+  },
+  "latestYear": 2024,
+  "notes": [
+    "Institution counts reflect the registered project owner, not collaborators.",
+    "Subject totals can overlap across themes and should not be summed as independent buckets.",
+    "The current dashboard dataset is a mocked static extract prepared for UI development."
+  ],
+  "projectCount": 25,
+  "totalFundingNok": 1401000000
+}
