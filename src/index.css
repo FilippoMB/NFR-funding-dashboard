@@ -99,11 +99,11 @@ p { margin: 0; }
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
   background: var(--color-bg-panel);
   border-radius: 24px;
   border: 1px solid var(--color-border);
-  padding: 32px 24px;
+  padding: 24px 24px;
   height: calc(100vh - 48px);
   position: sticky;
   top: 24px;
@@ -114,36 +114,44 @@ p { margin: 0; }
 .sidebar-brand {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .sidebar-brand h1 {
-  font-size: 2rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   background: linear-gradient(135deg, var(--color-text-primary), var(--color-text-secondary));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  line-height: 1.2;
 }
 
 .sidebar-brand p {
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .sidebar-credit {
-  font-size: 0.8rem !important;
+  font-size: 0.75rem !important;
   color: var(--color-text-muted) !important;
-  margin-top: 4px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  opacity: 0.7;
 }
 
 .sidebar-credit a {
-  color: var(--color-text-secondary);
+  color: var(--color-accent);
   text-decoration: none;
-  transition: color 0.2s ease;
+  font-weight: 500;
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
 
 .sidebar-credit a:hover {
-  color: var(--color-accent);
+  opacity: 1;
   text-decoration: underline;
 }
 
