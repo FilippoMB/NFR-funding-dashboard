@@ -53,6 +53,7 @@ export default function RankingBars({
   title,
   titles = null,
   subtitles = null,
+  valueColumnLabel = "",
   valueKey = "totalFundingNok",
   valueVariant = "currency",
   metaRenderer = (item) => `${formatNumber(item.projectCount)} projects in the selected slice`,
@@ -98,12 +99,36 @@ export default function RankingBars({
   if (!items.length) {
     return (
       <section className="ranking-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Ranked allocation</p>
-            <h2>{activeTitle}</h2>
+        <div className="panel-heading ranking-heading">
+          <div className="ranking-heading-copy">
+            <div>
+              <h2>{activeTitle}</h2>
+            </div>
+            {activeSubtitle ? <p className="panel-copy">{activeSubtitle}</p> : null}
           </div>
-          <p className="panel-copy">{activeSubtitle}</p>
+          <div className="ranking-actions" role="group" aria-label="Ranking view mode">
+            <button
+              className={`ranking-action${displayMode === DISPLAY_TOP ? " is-active" : ""}`}
+              onClick={() => setDisplayMode(DISPLAY_TOP)}
+              type="button"
+            >
+              Show top
+            </button>
+            <button
+              className={`ranking-action${displayMode === DISPLAY_BOTTOM ? " is-active" : ""}`}
+              onClick={() => setDisplayMode(DISPLAY_BOTTOM)}
+              type="button"
+            >
+              Show bottom
+            </button>
+            <button
+              className={`ranking-action${displayMode === DISPLAY_ALL ? " is-active" : ""}`}
+              onClick={() => setDisplayMode(DISPLAY_ALL)}
+              type="button"
+            >
+              Show all
+            </button>
+          </div>
         </div>
         <div className="empty-panel">{emptyLabel}</div>
       </section>
@@ -114,30 +139,13 @@ export default function RankingBars({
 
   return (
     <section className="ranking-panel">
-      <div className="panel-heading">
-        <div>
-          <p className="eyebrow">Ranked allocation</p>
-          <h2>{activeTitle}</h2>
+      <div className="panel-heading ranking-heading">
+        <div className="ranking-heading-copy">
+          <div>
+            <h2>{activeTitle}</h2>
+          </div>
+          {activeSubtitle ? <p className="panel-copy">{activeSubtitle}</p> : null}
         </div>
-        <p className="panel-copy">{activeSubtitle}</p>
-      </div>
-      <ol className="ranking-list">
-        {displayItems.map((item) => (
-          <RankingItem
-            displayRank={item.displayRank}
-            item={item}
-            key={item.id}
-            maxValue={maxValue}
-            metaRenderer={metaRenderer}
-            valueKey={valueKey}
-            valueVariant={valueVariant}
-          />
-        ))}
-      </ol>
-      <div className="ranking-footer">
-        <p className="ranking-count">
-          Showing {displayItems.length} of {items.length} institutions
-        </p>
         <div className="ranking-actions" role="group" aria-label="Ranking view mode">
           <button
             className={`ranking-action${displayMode === DISPLAY_TOP ? " is-active" : ""}`}
@@ -161,6 +169,28 @@ export default function RankingBars({
             Show all
           </button>
         </div>
+      </div>
+      <div className="ranking-list-header" aria-hidden="true">
+        <span>Institution</span>
+        <span>{valueColumnLabel}</span>
+      </div>
+      <ol className="ranking-list">
+        {displayItems.map((item) => (
+          <RankingItem
+            displayRank={item.displayRank}
+            item={item}
+            key={item.id}
+            maxValue={maxValue}
+            metaRenderer={metaRenderer}
+            valueKey={valueKey}
+            valueVariant={valueVariant}
+          />
+        ))}
+      </ol>
+      <div className="ranking-footer">
+        <p className="ranking-count">
+          Showing {displayItems.length} of {items.length} institutions
+        </p>
       </div>
     </section>
   );

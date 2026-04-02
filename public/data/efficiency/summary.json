@@ -1,1 +1,108 @@
-{"citationCount":15473181,"citationsPerMnok":143.01022512478505,"filters":{"counties":[{"id":"42","label":"Agder"},{"id":"32","label":"Akershus"},{"id":"33","label":"Buskerud"},{"id":"56","label":"Finnmark"},{"id":"34","label":"Innlandet"},{"id":"15","label":"Møre og Romsdal"},{"id":"18","label":"Nordland"},{"id":"03","label":"Oslo"},{"id":"11","label":"Rogaland"},{"id":"40","label":"Telemark"},{"id":"55","label":"Troms"},{"id":"50","label":"Trøndelag"},{"id":"39","label":"Vestfold"},{"id":"46","label":"Vestland"},{"id":"31","label":"Østfold"}],"years":[2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026]},"fundingNok":108196326427,"generatedAt":"2026-04-02T20:51:09.542566+00:00","latestYear":2026,"matchedInstitutionCount":136,"minFundingNokForRanking":10000000,"minPaperCountForRanking":10,"notes":["Efficiency is defined as published papers divided by funding in MNOK over the overlapping funding/OpenAlex year window.","The current efficiency dataset uses only years present in both sources.","Institution joins combine exact normalized-name matches, OpenAlex acronyms, and a curated alias table for major Norwegian institutions.","Ranking eligibility requires both a minimum funding level and a minimum paper count to reduce small-denominator distortions."],"overlapYearStart":2010,"paperCount":799644,"papersPerMnok":7.390676064584497,"rankingEligibleInstitutionCount":69,"source":{"funding":"Forskningsrådet open data · soknader2","impact":"OpenAlex institutions API","label":"Joined funding + OpenAlex efficiency dataset"}}
+{
+    "citationCount": 15473181,
+    "citationsPerMnok": 143.01022512478505,
+    "filters": {
+        "counties": [
+            {
+                "id": "42",
+                "label": "Agder"
+            },
+            {
+                "id": "32",
+                "label": "Akershus"
+            },
+            {
+                "id": "33",
+                "label": "Buskerud"
+            },
+            {
+                "id": "56",
+                "label": "Finnmark"
+            },
+            {
+                "id": "34",
+                "label": "Innlandet"
+            },
+            {
+                "id": "15",
+                "label": "Møre og Romsdal"
+            },
+            {
+                "id": "18",
+                "label": "Nordland"
+            },
+            {
+                "id": "03",
+                "label": "Oslo"
+            },
+            {
+                "id": "11",
+                "label": "Rogaland"
+            },
+            {
+                "id": "40",
+                "label": "Telemark"
+            },
+            {
+                "id": "55",
+                "label": "Troms"
+            },
+            {
+                "id": "50",
+                "label": "Trøndelag"
+            },
+            {
+                "id": "39",
+                "label": "Vestfold"
+            },
+            {
+                "id": "46",
+                "label": "Vestland"
+            },
+            {
+                "id": "31",
+                "label": "Østfold"
+            }
+        ],
+        "years": [
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2020,
+            2021,
+            2022,
+            2023,
+            2024,
+            2025,
+            2026
+        ]
+    },
+    "fundingNok": 108196326427,
+    "generatedAt": "2026-04-02T20:51:09.542566+00:00",
+    "latestYear": 2026,
+    "matchedInstitutionCount": 136,
+    "minFundingNokForRanking": 10000000,
+    "minPaperCountForRanking": 10,
+    "notes": [
+        "Efficiency is defined as published papers divided by funding in MNOK over the overlapping funding/OpenAlex year window.",
+        "The current efficiency dataset uses only years present in both sources.",
+        "Institution joins combine exact normalized-name matches, OpenAlex acronyms, and a curated alias table for major Norwegian institutions.",
+        "Ranking eligibility requires both a minimum funding level and a minimum paper count to reduce small-denominator distortions."
+    ],
+    "overlapYearStart": 2010,
+    "paperCount": 799644,
+    "papersPerMnok": 7.390676064584497,
+    "rankingEligibleInstitutionCount": 69,
+    "source": {
+        "funding": "Forskningsrådet open data",
+        "impact": "OpenAlex data",
+        "label": "Joined Forskningsrådet + OpenAlex data"
+    }
+}

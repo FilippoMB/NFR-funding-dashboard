@@ -45,6 +45,7 @@ export default function TimeSeriesChart({
   ariaLabel = "Funding by year",
   countKey = "projectCount",
   countLabel = "projects",
+  lineColor = "#38bdf8",
   secondaryKey = null,
   secondaryLabel = "",
   secondaryVariant = "number",
@@ -91,7 +92,7 @@ export default function TimeSeriesChart({
       <path
         d={buildLinePath(points)}
         fill="none"
-        stroke="#d1663b"
+        stroke={lineColor}
         strokeWidth="4"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -103,7 +104,7 @@ export default function TimeSeriesChart({
             cy={point.y}
             fill="#0d2336"
             r="5.5"
-            stroke="#f8f1e8"
+            stroke={lineColor}
             strokeWidth="2"
           />
           <title>
@@ -117,7 +118,14 @@ export default function TimeSeriesChart({
       ))}
       {data.map((item, index) => {
         const step = Math.max(1, Math.ceil(data.length / 8));
-        if (index % step !== 0 && index !== data.length - 1) return null;
+        const isLast = index === data.length - 1;
+        const isOnStep = index % step === 0;
+
+        // Skip labels that aren't on a step boundary and aren't the last point
+        if (!isOnStep && !isLast) return null;
+
+        // Skip stepped labels that are too close to the forced last label
+        if (isOnStep && !isLast && (data.length - 1 - index) < step) return null;
 
         return (
           <text
@@ -151,8 +159,8 @@ export default function TimeSeriesChart({
       })}
       <defs>
         <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#d1663b" />
-          <stop offset="100%" stopColor="#d1663b" stopOpacity="0" />
+          <stop offset="0%" stopColor={lineColor} />
+          <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
         </linearGradient>
       </defs>
     </svg>

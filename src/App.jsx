@@ -154,7 +154,7 @@ function buildImpactHighlights({
       meta:
         selectedCounty ?? leadCounty
           ? `${formatNumber((selectedCounty ?? leadCounty).paperCount)} papers`
-          : "No publication activity"
+          : "No published papers"
     },
     {
       label: "Peak publication year",
@@ -829,7 +829,7 @@ export default function App() {
   const modeCopy = {
     [MODE_FUNDING]: {
       leadPanelCopy: "Click a county to filter the trend and ranking views.",
-      leadPanelTitle: "Funding by region",
+      leadPanelTitle: "NFR funding by county",
       pies: [
         {
           emptyLabel: "No scheme allocation visible",
@@ -850,31 +850,27 @@ export default function App() {
         emptyLabel: "No institution funding is available for the current filter combination.",
         items: fundingRankings.institutions,
         metaRenderer: (item) => `${formatNumber(item.projectCount)} projects in the selected slice`,
-        subtitles: {
-          top: "Highest-funded project owners in the current funding slice.",
-          bottom: "Lowest-funded project owners in the current funding slice.",
-          all: "All project owners ranked by funding in the current slice."
-        },
         titles: {
           top: "Top Institutions",
           bottom: "Bottom Institutions",
           all: "All Institutions"
         },
+        valueColumnLabel: "Total fundings received",
         valueKey: "totalFundingNok",
         valueVariant: "currency"
       },
       seriesCopy: "The curve tracks allocated NOK across the selected slice.",
       seriesTitle: "Annual funding movement",
-      sourceLabel: fundingData?.summary?.source?.label ?? "Forskningsrådet open data"
+      sourceLabel: "Forskningsrådet open data"
     },
     [MODE_IMPACT]: {
       leadPanelCopy: "Click a county to focus publication output and citation activity.",
-      leadPanelTitle: "Publication activity by county",
+      leadPanelTitle: "Number of published papers by county",
       pies: [
         {
-          emptyLabel: "No publication activity visible",
+          emptyLabel: "No published papers visible",
           items: topImpactCountiesByPapers,
-          title: "Top Counties by Papers",
+          title: "Top Counties by Published Papers",
           valueKey: "paperCount",
           valueVariant: "number"
         },
@@ -891,22 +887,18 @@ export default function App() {
         items: impactInstitutionRankings,
         metaRenderer: (item) =>
           `${formatNumber(item.citationCount)} citations · ${formatDecimal(item.citationsPerPaper)} cites/paper`,
-        subtitles: {
-          top: "Most active institutions in the selected publication slice.",
-          bottom: "Least active institutions in the selected publication slice.",
-          all: "All institutions ranked by publication activity in the selected slice."
-        },
         titles: {
           top: "Top Institutions",
           bottom: "Bottom Institutions",
           all: "All Institutions"
         },
+        valueColumnLabel: "Total papers published",
         valueKey: "paperCount",
         valueVariant: "number"
       },
-      seriesCopy: "The curve tracks papers published across the selected slice.",
-      seriesTitle: "Annual publication activity",
-      sourceLabel: impactData?.summary?.source?.label ?? "OpenAlex institutions API"
+      seriesCopy: "The curve tracks the number of published papers across the selected slice.",
+      seriesTitle: "Annual number of published papers",
+      sourceLabel: "OpenAlex data"
     },
     [MODE_EFFICIENCY]: {
       leadPanelCopy:
@@ -938,45 +930,38 @@ export default function App() {
           `${formatNumber(item.paperCount)} papers · ${formatCompactCurrency(
             item.fundingNok
           )} matched funding`,
-        subtitles: {
-          top: `Institutions ranked by published papers per MNOK received. Rankings require at least ${
-            efficiencyData?.summary?.minPaperCountForRanking ?? 10
-          } papers and ${formatCompactCurrency(
-            efficiencyData?.summary?.minFundingNokForRanking ?? 10_000_000
-          )} in matched funding.`,
-          bottom: `Institutions at the bottom of the papers-per-MNOK ranking. Rankings still require at least ${
-            efficiencyData?.summary?.minPaperCountForRanking ?? 10
-          } papers and ${formatCompactCurrency(
-            efficiencyData?.summary?.minFundingNokForRanking ?? 10_000_000
-          )} in matched funding.`,
-          all: `All ranking-eligible institutions sorted by papers per MNOK. Rankings require at least ${
-            efficiencyData?.summary?.minPaperCountForRanking ?? 10
-          } papers and ${formatCompactCurrency(
-            efficiencyData?.summary?.minFundingNokForRanking ?? 10_000_000
-          )} in matched funding.`
-        },
         titles: {
           top: "Most Efficient Institutions",
           bottom: "Least Efficient Institutions",
           all: "All Institutions by Efficiency"
         },
+        valueColumnLabel: "No. papers/MNOK",
         valueKey: "papersPerMnok",
         valueVariant: "decimal"
       },
       seriesCopy: "The curve tracks published papers per MNOK across the selected slice.",
       seriesTitle: "Annual efficiency",
-      sourceLabel:
-        efficiencyData?.summary?.source?.label ?? "Joined funding + OpenAlex efficiency dataset"
+      sourceLabel: "Joined Forskningsrådet + OpenAlex data"
     }
   }[mode];
 
   return (
-    <main className="app-shell sidebar-layout">
+    <main className="app-shell sidebar-layout" data-mode={mode}>
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div>
-            <h1>NFR Funding</h1>
-            <p>Norwegian research statistics</p>
+            <h1>Funds & Outputs</h1>
+            <p>Allocation of funding from Norwegian Research Council and scientific output of Norwegian institutions</p>
+            <p className="sidebar-credit">
+              by{" "}
+              <a
+                href="https://sites.google.com/view/filippombianchi/home"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Filippo Maria Bianchi
+              </a>
+            </p>
           </div>
           <button
             className="mobile-filter-toggle"
@@ -1072,7 +1057,7 @@ export default function App() {
                       mode === MODE_FUNDING
                         ? "County-level choropleth of Norwegian funding allocations"
                         : mode === MODE_IMPACT
-                          ? "County-level choropleth of Norwegian publication activity"
+                          ? "County-level choropleth of Norwegian published papers"
                           : "County-level choropleth of Norwegian research efficiency"
                     }
                     countKey={
@@ -1127,7 +1112,7 @@ export default function App() {
                       mode === MODE_FUNDING
                         ? "Funding by year"
                         : mode === MODE_IMPACT
-                          ? "Publication activity by year"
+                          ? "Number of published papers by year"
                           : "Efficiency by year"
                     }
                     countKey={
@@ -1146,6 +1131,13 @@ export default function App() {
                     }
                     data={timeseries}
                     globalMax={contextualMax}
+                    lineColor={
+                      mode === MODE_FUNDING
+                        ? "#34d399"
+                        : mode === MODE_IMPACT
+                          ? "#38bdf8"
+                          : "#f87171"
+                    }
                     secondaryKey={mode === MODE_EFFICIENCY ? "fundingNok" : null}
                     secondaryLabel={mode === MODE_EFFICIENCY ? "NOK funding" : ""}
                     secondaryVariant={mode === MODE_EFFICIENCY ? "currency" : "number"}
@@ -1208,45 +1200,30 @@ export default function App() {
               </section>
             ) : null}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div className="panel-heading">
-                <h2>
-                  {mode === MODE_FUNDING
-                    ? "Allocation Breakdowns"
-                    : mode === MODE_IMPACT
-                      ? "Impact Breakdowns"
-                      : "Efficiency Rankings"}
-                </h2>
-              </div>
-
-              <section className="ranking-grid single-row">
-                {(mode === MODE_FUNDING &&
-                  !usingDefaultFilters &&
-                  fundingInstitutionCubeStatus === "loading") ? (
+            {(mode === MODE_FUNDING &&
+              !usingDefaultFilters &&
+              fundingInstitutionCubeStatus === "loading") ? (
                   <section className="ranking-panel">
                     <div className="panel-heading">
                       <div>
-                        <p className="eyebrow">Ranked allocation</p>
                         <h2>{modeCopy.ranking.titles?.top ?? modeCopy.ranking.title}</h2>
                       </div>
                     </div>
-                    <div className="empty-panel">
-                      Loading institution ranking for the selected slice.
-                    </div>
-                  </section>
-                ) : (
+                <div className="empty-panel">
+                  Loading institution ranking for the selected slice.
+                </div>
+              </section>
+            ) : (
                   <RankingBars
                     emptyLabel={modeCopy.ranking.emptyLabel}
                     items={modeCopy.ranking.items}
                     metaRenderer={modeCopy.ranking.metaRenderer}
-                    subtitles={modeCopy.ranking.subtitles}
                     titles={modeCopy.ranking.titles}
+                    valueColumnLabel={modeCopy.ranking.valueColumnLabel}
                     valueKey={modeCopy.ranking.valueKey}
                     valueVariant={modeCopy.ranking.valueVariant}
                   />
-                )}
-              </section>
-            </div>
+            )}
           </>
         ) : null}
       </section>

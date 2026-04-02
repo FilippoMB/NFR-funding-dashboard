@@ -20,7 +20,7 @@ OFFICIAL_SOURCE_URL = (
 OFFICIAL_SOURCE_PAGE = (
     "https://github.com/Forskningsradet/open-data/tree/main/datasets/soknader2"
 )
-OFFICIAL_SOURCE_LABEL = "Forskningsrådet open data · soknader2"
+OFFICIAL_SOURCE_LABEL = "Forskningsrådet open data"
 
 CURRENT_COUNTIES = {
     "03": "Oslo",

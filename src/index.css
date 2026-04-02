@@ -12,9 +12,11 @@
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
   
+  /* Default accent (blue, used by Impact) */
   --color-accent: #38bdf8;
   --color-accent-glow: rgba(56, 189, 248, 0.35);
   --color-accent-gradient: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  --color-accent-rgb: 56, 189, 248;
   
   --color-brand-start: #8b5cf6;
   --color-brand-end: #3b82f6;
@@ -27,6 +29,30 @@
   background-color: var(--color-bg-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Green accent for Funding mode */
+[data-mode="funding"] {
+  --color-accent: #34d399;
+  --color-accent-glow: rgba(52, 211, 153, 0.35);
+  --color-accent-gradient: linear-gradient(135deg, #059669, #34d399);
+  --color-accent-rgb: 52, 211, 153;
+}
+
+/* Blue accent for Impact mode (default already) */
+[data-mode="impact"] {
+  --color-accent: #38bdf8;
+  --color-accent-glow: rgba(56, 189, 248, 0.35);
+  --color-accent-gradient: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  --color-accent-rgb: 56, 189, 248;
+}
+
+/* Red/warm accent for Efficiency mode */
+[data-mode="efficiency"] {
+  --color-accent: #f87171;
+  --color-accent-glow: rgba(248, 113, 113, 0.35);
+  --color-accent-gradient: linear-gradient(135deg, #dc2626, #f87171);
+  --color-accent-rgb: 248, 113, 113;
 }
 
 html, body {
@@ -104,6 +130,23 @@ p { margin: 0; }
   font-size: 0.9rem;
 }
 
+.sidebar-credit {
+  font-size: 0.8rem !important;
+  color: var(--color-text-muted) !important;
+  margin-top: 4px;
+}
+
+.sidebar-credit a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.sidebar-credit a:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
 .mode-toggle {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -139,7 +182,7 @@ p { margin: 0; }
 .mode-toggle-button.is-active {
   color: var(--color-text-primary);
   background: var(--color-accent-gradient);
-  box-shadow: 0 10px 24px rgba(56, 189, 248, 0.24);
+  box-shadow: 0 10px 24px rgba(var(--color-accent-rgb), 0.24);
 }
 
 .sidebar-collapsible {
@@ -338,6 +381,18 @@ p { margin: 0; }
   margin-bottom: 24px;
 }
 
+.ranking-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ranking-heading-copy {
+  min-width: 0;
+  flex: 1;
+}
+
 .panel-heading h2 {
   font-size: 1.3rem;
   color: var(--color-text-primary);
@@ -483,6 +538,24 @@ p { margin: 0; }
   list-style: none;
 }
 
+.ranking-list-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ranking-list-header span:last-child {
+  text-align: right;
+}
+
 .ranking-item {
   display: flex;
   flex-direction: column;
@@ -527,7 +600,7 @@ p { margin: 0; }
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   padding-top: 16px;
   border-top: 1px solid var(--color-border);
@@ -541,6 +614,7 @@ p { margin: 0; }
 .ranking-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -563,10 +637,10 @@ p { margin: 0; }
 }
 
 .ranking-action.is-active {
-  border-color: rgba(56, 189, 248, 0.4);
-  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(var(--color-accent-rgb), 0.4);
+  background: rgba(var(--color-accent-rgb), 0.12);
   color: var(--color-text-primary);
-  box-shadow: 0 8px 20px rgba(56, 189, 248, 0.14);
+  box-shadow: 0 8px 20px rgba(var(--color-accent-rgb), 0.14);
 }
 
 /* Status Panels */
@@ -672,6 +746,15 @@ p { margin: 0; }
 
   .kpi-strip {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .ranking-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ranking-actions {
+    justify-content: flex-start;
   }
 }
 
