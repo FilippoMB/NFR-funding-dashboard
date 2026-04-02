@@ -1,14 +1,9 @@
 import { ALL_FILTER_VALUE } from "../lib/dashboard";
 
-const FILTER_CONFIG = [
-  { key: "countyId", label: "County", optionsKey: "counties" },
-  { key: "schemeId", label: "Funding Scheme", optionsKey: "schemes" },
-  { key: "subjectId", label: "Subject Field", optionsKey: "subjects" }
-];
-
 export default function FilterBar({
   activeFilters,
   availableFilters,
+  filterConfig,
   onFilterChange,
   onReset
 }) {
@@ -47,7 +42,7 @@ export default function FilterBar({
         )}
       </div>
 
-      {FILTER_CONFIG.map(({ key, label, optionsKey }) => {
+      {filterConfig.map(({ key, label, optionsKey }) => {
         const options = availableFilters[optionsKey] || [];
         return (
           <div className="filter-group" key={key}>

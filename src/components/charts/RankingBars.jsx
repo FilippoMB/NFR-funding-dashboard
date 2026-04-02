@@ -1,26 +1,55 @@
-import { formatCompactCurrency, formatNumber } from "../../lib/formatters";
+import {
+  formatCompactCurrency,
+  formatDecimal,
+  formatNumber
+} from "../../lib/formatters";
 
-function RankingItem({ index, item, maxValue }) {
-  const width = maxValue > 0 ? (item.totalFundingNok / maxValue) * 100 : 0;
+function formatMetricValue(value, variant) {
+  if (variant === "currency") {
+    return formatCompactCurrency(value);
+  }
+
+  if (variant === "decimal") {
+    return formatDecimal(value);
+  }
+
+  return formatNumber(value);
+}
+
+function RankingItem({
+  index,
+  item,
+  maxValue,
+  metaRenderer,
+  valueKey,
+  valueVariant
+}) {
+  const width = maxValue > 0 ? ((item[valueKey] ?? 0) / maxValue) * 100 : 0;
 
   return (
     <li className="ranking-item">
       <span className="rank-index">{String(index + 1).padStart(2, "0")}</span>
       <div className="ranking-labels">
         <strong>{item.label}</strong>
-        <span>{formatCompactCurrency(item.totalFundingNok)}</span>
+        <span>{formatMetricValue(item[valueKey] ?? 0, valueVariant)}</span>
       </div>
       <div className="ranking-track" aria-hidden="true">
         <div className="ranking-fill" style={{ width: `${width}%` }} />
       </div>
-      <p>
-        {formatNumber(item.projectCount)} projects in the selected slice
-      </p>
+      <p>{metaRenderer(item)}</p>
     </li>
   );
 }
 
-export default function RankingBars({ items, subtitle, title }) {
+export default function RankingBars({
+  items,
+  subtitle,
+  title,
+  valueKey = "totalFundingNok",
+  valueVariant = "currency",
+  metaRenderer = (item) => `${formatNumber(item.projectCount)} projects in the selected slice`,
+  emptyLabel = "No ranked values are available for the current filter combination."
+}) {
   if (!items.length) {
     return (
       <section className="ranking-panel">
@@ -31,14 +60,12 @@ export default function RankingBars({ items, subtitle, title }) {
           </div>
           <p className="panel-copy">{subtitle}</p>
         </div>
-        <div className="empty-panel">
-          No ranked values are available for the current filter combination.
-        </div>
+        <div className="empty-panel">{emptyLabel}</div>
       </section>
     );
   }
 
-  const maxValue = Math.max(...items.map((item) => item.totalFundingNok), 1);
+  const maxValue = Math.max(...items.map((item) => item[valueKey] ?? 0), 1);
 
   return (
     <section className="ranking-panel">
@@ -56,6 +83,9 @@ export default function RankingBars({ items, subtitle, title }) {
             item={item}
             key={item.id}
             maxValue={maxValue}
+            metaRenderer={metaRenderer}
+            valueKey={valueKey}
+            valueVariant={valueVariant}
           />
         ))}
       </ol>

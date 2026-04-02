@@ -1,6 +1,7 @@
 import {
   formatCompactCurrency,
   formatCurrency,
+  formatDecimal,
   formatNumber
 } from "../lib/formatters";
 
@@ -9,6 +10,10 @@ function formatKpi(item) {
     return item.value >= 1_000_000
       ? formatCompactCurrency(item.value)
       : formatCurrency(item.value);
+  }
+
+  if (item.variant === "decimal") {
+    return formatDecimal(item.value);
   }
 
   return formatNumber(item.value);

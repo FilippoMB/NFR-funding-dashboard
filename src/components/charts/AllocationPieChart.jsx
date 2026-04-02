@@ -1,19 +1,34 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import {
+  formatCompactCurrency,
+  formatDecimal,
+  formatNumber
+} from "../../lib/formatters";
 
 const COLORS = ['#38bdf8', '#818cf8', '#a78bfa', '#f472b6', '#fb923c', '#4ade80', '#fbbf24', '#f87171'];
 
-export default function AllocationPieChart({ items }) {
-  // Format items for the pie chart
+function formatMetricValue(value, variant) {
+  if (variant === "currency") {
+    return formatCompactCurrency(value);
+  }
+
+  if (variant === "decimal") {
+    return formatDecimal(value);
+  }
+
+  return formatNumber(value);
+}
+
+export default function AllocationPieChart({
+  items,
+  emptyLabel = "No allocation visible",
+  valueKey = "totalFundingNok",
+  valueVariant = "currency"
+}) {
   const data = items.slice(0, 8).map(item => ({
     name: item.label,
-    value: item.totalFundingNok
+    value: item[valueKey] ?? 0
   }));
-
-  const formatNOK = (value) => {
-    if (value >= 1000000000) return `kr ${(value / 1000000000).toFixed(1)} mrd.`;
-    if (value >= 1000000) return `kr ${(value / 1000000).toFixed(1)} mill.`;
-    return `kr ${value.toLocaleString()}`;
-  };
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -28,7 +43,9 @@ export default function AllocationPieChart({ items }) {
           fontSize: "0.85rem"
         }}>
           <p style={{ fontWeight: 600, marginBottom: "4px" }}>{payload[0].name}</p>
-          <p style={{ color: "var(--color-accent)" }}>{formatNOK(payload[0].value)}</p>
+          <p style={{ color: "var(--color-accent)" }}>
+            {formatMetricValue(payload[0].value, valueVariant)}
+          </p>
         </div>
       );
     }
@@ -36,7 +53,7 @@ export default function AllocationPieChart({ items }) {
   };
 
   if (!data || data.length === 0) {
-    return <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>No allocation visible</p>;
+    return <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>{emptyLabel}</p>;
   }
 
   return (

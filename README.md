@@ -58,6 +58,14 @@ Rebuild from the checked-in mock input instead:
 npm run data:build:mock
 ```
 
+Build the first OpenAlex-based impact dataset:
+
+```sh
+export OPENALEX_API_KEY=<your-openalex-key>
+export OPENALEX_EMAIL=<your-email>
+npm run impact:build
+```
+
 Create a production build:
 
 ```sh
@@ -83,6 +91,18 @@ The Python pipeline writes:
 - `funding_institution_cube.json`
 
 `npm run data:build` pulls the official `soknader2` CSV and regenerates `public/data/`. Commit the updated JSON when the upstream dataset changes.
+
+The OpenAlex impact prototype writes to `public/data/impact/`:
+
+- `summary.json`
+- `by_county.json`
+- `by_institution.json`
+- `institutions.json`
+- `timeseries.json`
+- `institution_cube.json`
+- `unmapped_institutions.json`
+
+This dataset is derived from OpenAlex institution `counts_by_year`, so it currently covers the last ten years only and uses institution geography to infer Norwegian counties.
 
 ## GitHub and deployment
 

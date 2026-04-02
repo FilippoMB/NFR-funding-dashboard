@@ -104,6 +104,39 @@ p { margin: 0; }
   font-size: 0.9rem;
 }
 
+.mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mode-toggle-button {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-toggle-button:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mode-toggle-button.is-active {
+  color: var(--color-text-primary);
+  background: var(--color-accent-gradient);
+  box-shadow: 0 10px 24px rgba(56, 189, 248, 0.24);
+}
+
 .sidebar-collapsible {
   display: flex;
   flex-direction: column;
@@ -309,6 +342,15 @@ p { margin: 0; }
   font-size: 0.9rem;
   color: var(--color-text-secondary);
   margin-top: 4px;
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Map specific */

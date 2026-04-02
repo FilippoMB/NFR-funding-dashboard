@@ -1,5 +1,9 @@
 import { scaleLinear } from "d3-scale";
-import { formatCompactCurrency, formatNumber } from "../../lib/formatters";
+import {
+  formatCompactCurrency,
+  formatDecimal,
+  formatNumber
+} from "../../lib/formatters";
 
 const WIDTH = 760;
 const HEIGHT = 300;
@@ -23,7 +27,29 @@ function buildAreaPath(points, baseline) {
   return `${linePath} L ${lastPoint.x} ${baseline} L ${firstPoint.x} ${baseline} Z`;
 }
 
-export default function TimeSeriesChart({ data, globalMax }) {
+function formatMetricValue(value, variant) {
+  if (variant === "currency") {
+    return formatCompactCurrency(value);
+  }
+
+  if (variant === "decimal") {
+    return formatDecimal(value);
+  }
+
+  return formatNumber(value);
+}
+
+export default function TimeSeriesChart({
+  data,
+  globalMax,
+  ariaLabel = "Funding by year",
+  countKey = "projectCount",
+  countLabel = "projects",
+  secondaryKey = null,
+  secondaryLabel = "",
+  valueKey = "totalFundingNok",
+  valueVariant = "currency"
+}) {
   if (!data.length) {
     return (
       <div className="empty-panel">
@@ -35,7 +61,7 @@ export default function TimeSeriesChart({ data, globalMax }) {
   const innerWidth = WIDTH - MARGIN.left - MARGIN.right;
   const innerHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
   const years = data.map((item) => item.year);
-  const maxValue = globalMax || Math.max(...data.map((item) => item.totalFundingNok), 1);
+  const maxValue = globalMax || Math.max(...data.map((item) => item[valueKey] ?? 0), 1);
   const xScale = scaleLinear()
     .domain([Math.min(...years), Math.max(...years)])
     .range([MARGIN.left, MARGIN.left + innerWidth]);
@@ -45,12 +71,12 @@ export default function TimeSeriesChart({ data, globalMax }) {
   const points = data.map((item) => ({
     ...item,
     x: xScale(item.year),
-    y: yScale(item.totalFundingNok)
+    y: yScale(item[valueKey] ?? 0)
   }));
 
   return (
     <svg
-      aria-label="Funding by year"
+      aria-label={ariaLabel}
       className="timeseries-chart"
       role="img"
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -80,8 +106,11 @@ export default function TimeSeriesChart({ data, globalMax }) {
             strokeWidth="2"
           />
           <title>
-            {point.year}: {formatCompactCurrency(point.totalFundingNok)} and{" "}
-            {formatNumber(point.projectCount)} projects
+            {point.year}: {formatMetricValue(point[valueKey] ?? 0, valueVariant)}
+            {countKey ? ` and ${formatNumber(point[countKey] ?? 0)} ${countLabel}` : ""}
+            {secondaryKey
+              ? `, ${formatNumber(point[secondaryKey] ?? 0)} ${secondaryLabel}`
+              : ""}
           </title>
         </g>
       ))}
@@ -114,7 +143,7 @@ export default function TimeSeriesChart({ data, globalMax }) {
               className="chart-gridline"
             />
             <text className="chart-axis-label is-y-axis" x={MARGIN.left - 12} y={y + 4}>
-              {formatCompactCurrency(value)}
+              {formatMetricValue(value, valueVariant)}
             </text>
           </g>
         );

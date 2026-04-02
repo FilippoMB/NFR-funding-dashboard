@@ -17,14 +17,36 @@ import {
   buildCountySeriesFromAggregate,
   buildDimensionRankings,
   buildDimensionRankingsFromAggregate,
+  buildFundingKpisFromSummary,
+  buildImpactCountySeries,
+  buildImpactCountySeriesFromAggregate,
+  buildImpactInstitutionRankings,
+  buildImpactInstitutionRankingsFromAggregate,
+  buildImpactKpis,
+  buildImpactKpisFromSummary,
+  buildImpactTimeseries,
   buildInstitutionRankings,
   buildKpis,
   buildTimeseries,
+  buildTopMetricRanking,
   filterCubeRecords,
   isDefaultFilter
 } from "./lib/dashboard";
+import { formatDecimal, formatNumber } from "./lib/formatters";
 
 const AllocationPieChart = lazy(() => import("./components/charts/AllocationPieChart"));
+
+const MODE_FUNDING = "funding";
+const MODE_IMPACT = "impact";
+
+const FILTER_CONFIGS = {
+  [MODE_FUNDING]: [
+    { key: "countyId", label: "County", optionsKey: "counties" },
+    { key: "schemeId", label: "Funding Scheme", optionsKey: "schemes" },
+    { key: "subjectId", label: "Subject Field", optionsKey: "subjects" }
+  ],
+  [MODE_IMPACT]: [{ key: "countyId", label: "County", optionsKey: "counties" }]
+};
 
 const DEFAULT_FILTERS = {
   year: ALL_FILTER_VALUE,
@@ -37,18 +59,123 @@ function buildDataUrl(path) {
   return `${import.meta.env.BASE_URL}${path}`;
 }
 
+function normalizeFiltersForMode(filters, mode) {
+  if (mode === MODE_IMPACT) {
+    return {
+      ...filters,
+      schemeId: ALL_FILTER_VALUE,
+      subjectId: ALL_FILTER_VALUE
+    };
+  }
+
+  return filters;
+}
+
+function buildFundingHighlights({
+  activeCountyId,
+  countySeries,
+  institutionCubeStatus,
+  rankings,
+  selectedCounty,
+  timeseries
+}) {
+  const leadCounty = countySeries.find((item) => item.totalFundingNok > 0) ?? null;
+  const peakYear =
+    timeseries.length > 0
+      ? timeseries.reduce((best, current) =>
+          current.totalFundingNok > best.totalFundingNok ? current : best
+        )
+      : null;
+  const leadInstitution = rankings.institutions[0] ?? null;
+
+  return [
+    {
+      label: activeCountyId ? "Selected county" : "Leading county",
+      value: (selectedCounty ?? leadCounty)?.countyName ?? "No data",
+      meta:
+        selectedCounty ?? leadCounty
+          ? `${(selectedCounty ?? leadCounty).projectCount} projects`
+          : "No allocation visible"
+    },
+    {
+      label: "Peak year",
+      value: peakYear ? String(peakYear.year) : "No data",
+      meta: peakYear ? `${peakYear.projectCount} projects` : "No annual series"
+    },
+    {
+      label: "Top institution",
+      value:
+        institutionCubeStatus === "loading"
+          ? "Loading…"
+          : leadInstitution?.label ?? "No data",
+      meta:
+        institutionCubeStatus === "loading"
+          ? "Fetching institution slices"
+          : leadInstitution
+            ? `${leadInstitution.projectCount} projects`
+            : "No institution ranking"
+    }
+  ];
+}
+
+function buildImpactHighlights({
+  activeCountyId,
+  countySeries,
+  rankings,
+  selectedCounty,
+  timeseries
+}) {
+  const leadCounty = countySeries.find((item) => item.paperCount > 0) ?? null;
+  const peakYear =
+    timeseries.length > 0
+      ? timeseries.reduce((best, current) =>
+          current.paperCount > best.paperCount ? current : best
+        )
+      : null;
+  const leadInstitution = rankings.institutions[0] ?? null;
+
+  return [
+    {
+      label: activeCountyId ? "Selected county" : "Most active county",
+      value: (selectedCounty ?? leadCounty)?.countyName ?? "No data",
+      meta:
+        selectedCounty ?? leadCounty
+          ? `${formatNumber((selectedCounty ?? leadCounty).paperCount)} papers`
+          : "No publication activity"
+    },
+    {
+      label: "Peak publication year",
+      value: peakYear ? String(peakYear.year) : "No data",
+      meta: peakYear ? `${formatNumber(peakYear.citationCount)} citations` : "No annual series"
+    },
+    {
+      label: "Top institution",
+      value: leadInstitution?.label ?? "No data",
+      meta: leadInstitution
+        ? `${formatNumber(leadInstitution.citationCount)} citations`
+        : "No institution ranking"
+    }
+  ];
+}
+
 export default function App() {
-  const [dashboardData, setDashboardData] = useState(null);
-  const [institutionCubeStatus, setInstitutionCubeStatus] = useState("idle");
-  const [status, setStatus] = useState({ type: "loading", message: "" });
+  const [mode, setMode] = useState(MODE_FUNDING);
+  const [fundingData, setFundingData] = useState(null);
+  const [impactData, setImpactData] = useState(null);
+  const [fundingInstitutionCubeStatus, setFundingInstitutionCubeStatus] = useState("idle");
+  const [impactInstitutionCubeStatus, setImpactInstitutionCubeStatus] = useState("idle");
+  const [fundingStatus, setFundingStatus] = useState({ type: "loading", message: "" });
+  const [impactStatus, setImpactStatus] = useState({ type: "idle", message: "" });
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const deferredFilters = useDeferredValue(filters);
+
+  const modeFilters = normalizeFiltersForMode(filters, mode);
+  const deferredFilters = useDeferredValue(modeFilters);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadDashboardData() {
+    async function loadFundingData() {
       try {
         const responses = await Promise.all([
           fetch(buildDataUrl("data/summary.json")),
@@ -78,7 +205,7 @@ export default function App() {
           return;
         }
 
-        setDashboardData({
+        setFundingData({
           byCounty,
           byDimension,
           countyGeojson,
@@ -87,14 +214,14 @@ export default function App() {
           summary,
           timeseries
         });
-        setInstitutionCubeStatus("idle");
-        setStatus({ type: "ready", message: "" });
+        setFundingInstitutionCubeStatus("idle");
+        setFundingStatus({ type: "ready", message: "" });
       } catch (error) {
         if (!isMounted) {
           return;
         }
 
-        setStatus({
+        setFundingStatus({
           type: "error",
           message:
             error instanceof Error
@@ -104,37 +231,26 @@ export default function App() {
       }
     }
 
-    loadDashboardData();
+    loadFundingData();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const availableFilters = dashboardData?.summary.filters ?? {
-    counties: [],
-    schemes: [],
-    subjects: [],
-    years: []
-  };
-  const filteredCube = dashboardData
-    ? filterCubeRecords(dashboardData.cube, deferredFilters)
-    : [];
-  const usingDefaultFilters = isDefaultFilter(deferredFilters);
-
   useEffect(() => {
     if (
-      !dashboardData ||
-      dashboardData.institutionCube ||
-      institutionCubeStatus === "loading" ||
-      institutionCubeStatus === "ready"
+      !fundingData ||
+      fundingData.institutionCube ||
+      fundingInstitutionCubeStatus === "loading" ||
+      fundingInstitutionCubeStatus === "ready"
     ) {
       return;
     }
 
-    async function loadInstitutionCube() {
+    async function loadFundingInstitutionCube() {
       try {
-        setInstitutionCubeStatus("loading");
+        setFundingInstitutionCubeStatus("loading");
         const response = await fetch(buildDataUrl("data/funding_institution_cube.json"));
 
         if (!response.ok) {
@@ -143,112 +259,250 @@ export default function App() {
 
         const institutionCube = await response.json();
 
-        setDashboardData((current) =>
+        setFundingData((current) =>
           current ? { ...current, institutionCube } : current
         );
-        setInstitutionCubeStatus("ready");
+        setFundingInstitutionCubeStatus("ready");
       } catch (error) {
-        setInstitutionCubeStatus("error");
+        setFundingInstitutionCubeStatus("error");
         console.error("Institution ranking data could not be loaded.", error);
       }
     }
 
-    void loadInstitutionCube();
-  }, [dashboardData, institutionCubeStatus]);
+    void loadFundingInstitutionCube();
+  }, [fundingData, fundingInstitutionCubeStatus]);
 
-  const kpis = buildKpis(filteredCube);
-  const countySeries = dashboardData
-    ? usingDefaultFilters
-      ? buildCountySeriesFromAggregate(
-          dashboardData.byCounty,
-          availableFilters.counties
-        )
-      : buildCountySeries(filteredCube, availableFilters.counties)
-    : [];
-  const yearAgnosticFilters = { ...deferredFilters, year: ALL_FILTER_VALUE };
-  const yearAgnosticCube = dashboardData
-    ? filterCubeRecords(dashboardData.cube, yearAgnosticFilters)
-    : [];
-  const yearAgnosticTimeseries = dashboardData
-    ? isDefaultFilter(yearAgnosticFilters)
-      ? dashboardData.timeseries
-      : buildTimeseries(yearAgnosticCube, availableFilters.years)
-    : [];
-  const timeseries = dashboardData
-    ? usingDefaultFilters
-      ? dashboardData.timeseries
-      : buildTimeseries(filteredCube, availableFilters.years)
-    : [];      
-  const contextualMax = Math.max(
-    ...yearAgnosticTimeseries.map((item) => item.totalFundingNok),
-    1
-  );
+  useEffect(() => {
+    if (mode !== MODE_IMPACT || impactData || impactStatus.type === "loading") {
+      return;
+    }
 
-  const defaultRankings = dashboardData
-    ? buildDimensionRankingsFromAggregate(dashboardData.byDimension)
+    async function loadImpactData() {
+      try {
+        setImpactStatus({ type: "loading", message: "" });
+        const responses = await Promise.all([
+          fetch(buildDataUrl("data/impact/summary.json")),
+          fetch(buildDataUrl("data/impact/by_county.json")),
+          fetch(buildDataUrl("data/impact/timeseries.json")),
+          fetch(buildDataUrl("data/impact/by_institution.json"))
+        ]);
+
+        for (const response of responses) {
+          if (!response.ok) {
+            throw new Error(`Impact asset load failed with ${response.status}.`);
+          }
+        }
+
+        const [summary, byCounty, timeseries, byInstitution] =
+          await Promise.all(responses.map((response) => response.json()));
+
+        setImpactData({
+          byCounty,
+          byInstitution,
+          institutionCube: null,
+          summary,
+          timeseries
+        });
+        setImpactInstitutionCubeStatus("idle");
+        setImpactStatus({ type: "ready", message: "" });
+      } catch (error) {
+        setImpactStatus({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "The impact dataset could not be loaded."
+        });
+      }
+    }
+
+    void loadImpactData();
+  }, [impactData, impactStatus.type, mode]);
+
+  useEffect(() => {
+    if (
+      mode !== MODE_IMPACT ||
+      !impactData ||
+      impactData.institutionCube ||
+      impactInstitutionCubeStatus === "loading" ||
+      impactInstitutionCubeStatus === "ready"
+    ) {
+      return;
+    }
+
+    async function loadImpactInstitutionCube() {
+      try {
+        setImpactInstitutionCubeStatus("loading");
+        const response = await fetch(buildDataUrl("data/impact/institution_cube.json"));
+
+        if (!response.ok) {
+          throw new Error(`Impact asset load failed with ${response.status}.`);
+        }
+
+        const institutionCube = await response.json();
+
+        setImpactData((current) =>
+          current ? { ...current, institutionCube } : current
+        );
+        setImpactInstitutionCubeStatus("ready");
+      } catch (error) {
+        setImpactInstitutionCubeStatus("error");
+        console.error("Impact institution cube could not be loaded.", error);
+      }
+    }
+
+    void loadImpactInstitutionCube();
+  }, [impactData, impactInstitutionCubeStatus, mode]);
+
+  const currentData = mode === MODE_FUNDING ? fundingData : impactData;
+  const activeStatus = mode === MODE_FUNDING ? fundingStatus : impactStatus;
+  const availableFilters = currentData?.summary.filters ?? {
+    counties: [],
+    schemes: [],
+    subjects: [],
+    years: []
+  };
+  const usingDefaultFilters = isDefaultFilter(deferredFilters);
+
+  const fundingFilteredCube = fundingData
+    ? filterCubeRecords(fundingData.cube, deferredFilters)
+    : [];
+  const fundingYearAgnosticFilters = { ...deferredFilters, year: ALL_FILTER_VALUE };
+  const fundingYearAgnosticCube = fundingData
+    ? filterCubeRecords(fundingData.cube, fundingYearAgnosticFilters)
+    : [];
+  const fundingDefaultRankings = fundingData
+    ? buildDimensionRankingsFromAggregate(fundingData.byDimension)
     : { institutions: [], schemes: [], subjects: [] };
-  const dimensionRankings = dashboardData
+  const fundingDimensionRankings = fundingData
     ? usingDefaultFilters
-      ? defaultRankings
-      : buildDimensionRankings(filteredCube, availableFilters)
+      ? fundingDefaultRankings
+      : buildDimensionRankings(fundingFilteredCube, fundingData.summary.filters)
     : { institutions: [], schemes: [], subjects: [] };
-  const institutionRankings = dashboardData
+  const fundingInstitutionRankings = fundingData
     ? usingDefaultFilters
-      ? defaultRankings.institutions
-      : dashboardData.institutionCube
+      ? fundingDefaultRankings.institutions
+      : fundingData.institutionCube
         ? buildInstitutionRankings(
-            filterCubeRecords(dashboardData.institutionCube, deferredFilters)
+            filterCubeRecords(fundingData.institutionCube, deferredFilters)
           )
         : []
     : [];
-  const rankingsResolved = {
-    ...dimensionRankings,
-    institutions: institutionRankings
+  const fundingRankings = {
+    ...fundingDimensionRankings,
+    institutions: fundingInstitutionRankings
   };
+  const fundingCountySeries = fundingData
+    ? usingDefaultFilters
+      ? buildCountySeriesFromAggregate(
+          fundingData.byCounty,
+          fundingData.summary.filters.counties
+        )
+      : buildCountySeries(fundingFilteredCube, fundingData.summary.filters.counties)
+    : [];
+  const fundingTimeseries = fundingData
+    ? usingDefaultFilters
+      ? fundingData.timeseries
+      : buildTimeseries(fundingFilteredCube, fundingData.summary.filters.years)
+    : [];
+  const fundingYearAgnosticTimeseries = fundingData
+    ? isDefaultFilter(fundingYearAgnosticFilters)
+      ? fundingData.timeseries
+      : buildTimeseries(
+          fundingYearAgnosticCube,
+          fundingData.summary.filters.years
+        )
+    : [];
+  const fundingKpis = fundingData
+    ? usingDefaultFilters
+      ? buildFundingKpisFromSummary(fundingData.summary)
+      : buildKpis(fundingFilteredCube)
+    : [];
+
+  const impactFilteredCube = impactData
+    ? filterCubeRecords(impactData.institutionCube ?? [], deferredFilters)
+    : [];
+  const impactYearAgnosticFilters = { ...deferredFilters, year: ALL_FILTER_VALUE };
+  const impactYearAgnosticCube = impactData
+    ? filterCubeRecords(impactData.institutionCube ?? [], impactYearAgnosticFilters)
+    : [];
+  const impactCountySeries = impactData
+    ? usingDefaultFilters
+      ? buildImpactCountySeriesFromAggregate(
+          impactData.byCounty,
+          impactData.summary.filters.counties
+        )
+      : buildImpactCountySeries(impactFilteredCube, impactData.summary.filters.counties)
+    : [];
+  const impactTimeseries = impactData
+    ? usingDefaultFilters
+      ? impactData.timeseries
+      : buildImpactTimeseries(impactFilteredCube, impactData.summary.filters.years)
+    : [];
+  const impactYearAgnosticTimeseries = impactData
+    ? isDefaultFilter(impactYearAgnosticFilters)
+      ? impactData.timeseries
+      : buildImpactTimeseries(
+          impactYearAgnosticCube,
+          impactData.summary.filters.years
+        )
+    : [];
+  const impactInstitutionRankings = impactData
+    ? usingDefaultFilters
+      ? buildImpactInstitutionRankingsFromAggregate(impactData.byInstitution)
+      : buildImpactInstitutionRankings(impactFilteredCube)
+    : [];
+  const impactKpis = impactData
+    ? usingDefaultFilters
+      ? buildImpactKpisFromSummary(impactData.summary)
+      : buildImpactKpis(impactFilteredCube)
+    : [];
+
   const activeCountyId =
     deferredFilters.countyId === ALL_FILTER_VALUE
       ? null
       : deferredFilters.countyId;
+
+  const countySeries = mode === MODE_FUNDING ? fundingCountySeries : impactCountySeries;
+  const timeseries = mode === MODE_FUNDING ? fundingTimeseries : impactTimeseries;
+  const contextualMax =
+    mode === MODE_FUNDING
+      ? Math.max(
+          ...fundingYearAgnosticTimeseries.map((item) => item.totalFundingNok),
+          1
+        )
+      : Math.max(...impactYearAgnosticTimeseries.map((item) => item.paperCount), 1);
+  const kpis = mode === MODE_FUNDING ? fundingKpis : impactKpis;
   const selectedCounty =
     (activeCountyId
       ? countySeries.find((item) => item.countyId === activeCountyId)
       : null) ?? null;
-  const leadCounty = countySeries.find((item) => item.totalFundingNok > 0);
-  const peakYear =
-    timeseries.length > 0
-      ? timeseries.reduce((best, current) =>
-          current.totalFundingNok > best.totalFundingNok ? current : best
-        )
-      : null;
-  const leadInstitution = rankingsResolved.institutions[0] ?? null;
-  const highlights = [
-    {
-      label: activeCountyId ? "Selected county" : "Leading county",
-      value: (selectedCounty ?? leadCounty)?.countyName ?? "No data",
-      meta:
-        selectedCounty ?? leadCounty
-          ? `${(selectedCounty ?? leadCounty).projectCount} projects`
-          : "No allocation visible"
-    },
-    {
-      label: "Peak year",
-      value: peakYear ? String(peakYear.year) : "No data",
-      meta: peakYear ? `${peakYear.projectCount} projects` : "No annual series"
-    },
-    {
-      label: "Top institution",
-      value:
-        !usingDefaultFilters && institutionCubeStatus === "loading"
-          ? "Loading…"
-          : leadInstitution?.label ?? "No data",
-      meta:
-        !usingDefaultFilters && institutionCubeStatus === "loading"
-          ? "Fetching institution slices"
-          : leadInstitution
-            ? `${leadInstitution.projectCount} projects`
-            : "No institution ranking"
-    }
-  ];
+  const highlights =
+    mode === MODE_FUNDING
+      ? buildFundingHighlights({
+          activeCountyId,
+          countySeries: fundingCountySeries,
+          institutionCubeStatus:
+            !usingDefaultFilters && fundingInstitutionCubeStatus === "loading"
+              ? "loading"
+              : "ready",
+          rankings: fundingRankings,
+          selectedCounty,
+          timeseries: fundingTimeseries
+        })
+      : buildImpactHighlights({
+          activeCountyId,
+          countySeries: impactCountySeries,
+          rankings: { institutions: impactInstitutionRankings },
+          selectedCounty,
+          timeseries: impactTimeseries
+        });
+
+  const topImpactCountiesByPapers = buildTopMetricRanking(impactCountySeries, "paperCount");
+  const topImpactCountiesByCitations = buildTopMetricRanking(
+    impactCountySeries,
+    "citationCount"
+  );
 
   function updateFilter(key, value) {
     startTransition(() => {
@@ -272,6 +526,84 @@ export default function App() {
     );
   }
 
+  function switchMode(nextMode) {
+    startTransition(() => {
+      setMode(nextMode);
+    });
+  }
+
+  const currentRecords = mode === MODE_FUNDING ? fundingFilteredCube : impactFilteredCube;
+  const showNoMatch =
+    activeStatus.type === "ready" && !usingDefaultFilters && currentRecords.length === 0;
+
+  const modeCopy = {
+    [MODE_FUNDING]: {
+      leadPanelCopy: "Click a county to filter the trend and ranking views.",
+      leadPanelTitle: "Funding by region",
+      pies: [
+        {
+          emptyLabel: "No scheme allocation visible",
+          items: fundingRankings.schemes,
+          title: "Funding Schemes",
+          valueKey: "totalFundingNok",
+          valueVariant: "currency"
+        },
+        {
+          emptyLabel: "No subject allocation visible",
+          items: fundingRankings.subjects,
+          title: "Subject Fields",
+          valueKey: "totalFundingNok",
+          valueVariant: "currency"
+        }
+      ],
+      ranking: {
+        emptyLabel: "No institution funding is available for the current filter combination.",
+        items: fundingRankings.institutions,
+        metaRenderer: (item) => `${formatNumber(item.projectCount)} projects in the selected slice`,
+        subtitle: "Highest-funded project owners in the current funding slice.",
+        title: "Top Institutions",
+        valueKey: "totalFundingNok",
+        valueVariant: "currency"
+      },
+      seriesCopy: "The curve tracks allocated NOK across the selected slice.",
+      seriesTitle: "Annual funding movement",
+      sourceLabel: fundingData?.summary?.source?.label ?? "Forskningsrådet open data"
+    },
+    [MODE_IMPACT]: {
+      leadPanelCopy: "Click a county to focus publication output and citation activity.",
+      leadPanelTitle: "Publication activity by county",
+      pies: [
+        {
+          emptyLabel: "No publication activity visible",
+          items: topImpactCountiesByPapers,
+          title: "Top Counties by Papers",
+          valueKey: "paperCount",
+          valueVariant: "number"
+        },
+        {
+          emptyLabel: "No citation activity visible",
+          items: topImpactCountiesByCitations,
+          title: "Top Counties by Citations",
+          valueKey: "citationCount",
+          valueVariant: "number"
+        }
+      ],
+      ranking: {
+        emptyLabel: "No institution impact values are available for the current filter combination.",
+        items: impactInstitutionRankings,
+        metaRenderer: (item) =>
+          `${formatNumber(item.citationCount)} citations · ${formatDecimal(item.citationsPerPaper)} cites/paper`,
+        subtitle: "Most active institutions in the selected publication slice.",
+        title: "Top Institutions",
+        valueKey: "paperCount",
+        valueVariant: "number"
+      },
+      seriesCopy: "The curve tracks papers published across the selected slice.",
+      seriesTitle: "Annual publication activity",
+      sourceLabel: impactData?.summary?.source?.label ?? "OpenAlex institutions API"
+    }
+  }[mode];
+
   return (
     <main className="app-shell sidebar-layout">
       <aside className="sidebar">
@@ -280,93 +612,135 @@ export default function App() {
             <h1>NFR Funding</h1>
             <p>Norwegian research statistics</p>
           </div>
-          <button 
-            className="mobile-filter-toggle" 
+          <button
+            className="mobile-filter-toggle"
             onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
           >
             {isMobileFilterOpen ? "Hide Filters" : "Show Filters"}
           </button>
         </div>
+
         <div className={`sidebar-collapsible ${isMobileFilterOpen ? "is-open" : ""}`}>
+          <div className="mode-toggle" role="tablist" aria-label="Dashboard mode">
+            <button
+              className={`mode-toggle-button${mode === MODE_FUNDING ? " is-active" : ""}`}
+              onClick={() => switchMode(MODE_FUNDING)}
+              type="button"
+            >
+              Funding
+            </button>
+            <button
+              className={`mode-toggle-button${mode === MODE_IMPACT ? " is-active" : ""}`}
+              onClick={() => switchMode(MODE_IMPACT)}
+              type="button"
+            >
+              Impact
+            </button>
+          </div>
+
           <FilterBar
-            activeFilters={filters}
+            activeFilters={deferredFilters}
             availableFilters={availableFilters}
+            filterConfig={FILTER_CONFIGS[mode]}
             onFilterChange={updateFilter}
             onReset={resetFilters}
           />
           <div className="sidebar-footer">
-            <p>{dashboardData?.summary?.source?.label ?? "Forskningsrådet open data"}</p>
-            <p>Latest year: {dashboardData?.summary?.latestYear ?? "..."}</p>
+            <p>{modeCopy.sourceLabel}</p>
+            <p>Latest year: {currentData?.summary?.latestYear ?? "..."}</p>
           </div>
         </div>
       </aside>
 
       <section className="workspace-main">
-        {status.type === "error" ? (
+        {activeStatus.type === "error" ? (
           <section className="status-panel is-error">
             <h2>Data Load Failed</h2>
-            <p>{status.message}</p>
+            <p>{activeStatus.message}</p>
           </section>
         ) : null}
 
-        {status.type === "loading" ? (
+        {activeStatus.type === "loading" || activeStatus.type === "idle" ? (
           <section className="status-panel">
             <h2>Loading Dashboard Assets...</h2>
-            <p>Fetching JSON bundles and county geometry</p>
+            <p>
+              {mode === MODE_FUNDING
+                ? "Fetching funding JSON bundles and county geometry"
+                : "Fetching OpenAlex impact bundles"}
+            </p>
           </section>
         ) : null}
 
-        {status.type === "ready" ? (
+        {activeStatus.type === "ready" ? (
           <>
             <section className="top-visuals layout-split">
               <div className="map-panel map-tall">
                 <div className="panel-heading">
-                  <h2>Funding by region</h2>
-                  <p className="panel-copy">
-                    Click a county to filter the trend and ranking views.
-                  </p>
+                  <h2>{modeCopy.leadPanelTitle}</h2>
+                  <p className="panel-copy">{modeCopy.leadPanelCopy}</p>
                 </div>
                 <div className="map-stage map-enlarged">
                   <CountyMap
                     activeCountyId={activeCountyId}
+                    ariaLabel={
+                      mode === MODE_FUNDING
+                        ? "County-level choropleth of Norwegian funding allocations"
+                        : "County-level choropleth of Norwegian publication activity"
+                    }
+                    countKey={mode === MODE_FUNDING ? "projectCount" : "citationCount"}
+                    countLabel={mode === MODE_FUNDING ? "projects" : "citations"}
                     data={countySeries}
-                    geojson={dashboardData.countyGeojson}
+                    geojson={fundingData?.countyGeojson}
                     onSelectCounty={selectCounty}
+                    valueKey={mode === MODE_FUNDING ? "totalFundingNok" : "paperCount"}
+                    valueVariant={mode === MODE_FUNDING ? "currency" : "number"}
                   />
                 </div>
               </div>
-              
-              <div className="right-panels" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+
+              <div
+                className="right-panels"
+                style={{ display: "flex", flexDirection: "column", gap: "24px" }}
+              >
                 <div className="chart-panel">
                   <div className="panel-heading">
-                    <h2>Annual funding movement</h2>
-                    <p className="panel-copy">
-                      The curve tracks allocated NOK across the selected slice.
-                    </p>
+                    <h2>{modeCopy.seriesTitle}</h2>
+                    <p className="panel-copy">{modeCopy.seriesCopy}</p>
                   </div>
-                  <TimeSeriesChart 
-                    data={timeseries} 
+                  <TimeSeriesChart
+                    ariaLabel={
+                      mode === MODE_FUNDING
+                        ? "Funding by year"
+                        : "Publication activity by year"
+                    }
+                    countKey={mode === MODE_FUNDING ? "projectCount" : "citationCount"}
+                    countLabel={mode === MODE_FUNDING ? "projects" : "citations"}
+                    data={timeseries}
                     globalMax={contextualMax}
+                    valueKey={mode === MODE_FUNDING ? "totalFundingNok" : "paperCount"}
+                    valueVariant={mode === MODE_FUNDING ? "currency" : "number"}
                   />
                 </div>
 
-                <div className="pie-panels" style={{ display: "grid", gap: "24px" }}>
-                  <div className="ranking-panel">
-                    <div className="panel-heading" style={{marginBottom: "8px"}}>
-                      <h3>Funding Schemes</h3>
+                <div
+                  className="pie-panels"
+                  style={{ display: "grid", gap: "24px" }}
+                >
+                  {modeCopy.pies.map((pie) => (
+                    <div className="ranking-panel" key={pie.title}>
+                      <div className="panel-heading" style={{ marginBottom: "8px" }}>
+                        <h3>{pie.title}</h3>
+                      </div>
+                      <Suspense fallback={<div className="empty-panel">Loading chart…</div>}>
+                        <AllocationPieChart
+                          emptyLabel={pie.emptyLabel}
+                          items={pie.items}
+                          valueKey={pie.valueKey}
+                          valueVariant={pie.valueVariant}
+                        />
+                      </Suspense>
                     </div>
-                    <Suspense fallback={<div className="empty-panel">Loading chart…</div>}>
-                      <AllocationPieChart items={rankingsResolved.schemes} />
-                    </Suspense>
-                  </div>
-                  <div className="ranking-panel">
-                    <div className="panel-heading" style={{marginBottom: "8px"}}>
-                      <h3>Subject Fields</h3>
-                    </div>
-                    <Suspense fallback={<div className="empty-panel">Loading chart…</div>}>
-                      <AllocationPieChart items={rankingsResolved.subjects} />
-                    </Suspense>
-                  </div>
+                  ))}
                 </div>
               </div>
             </section>
@@ -383,17 +757,28 @@ export default function App() {
 
             <KpiStrip items={kpis} />
 
-            {!filteredCube.length ? (
+            {showNoMatch ? (
               <section className="status-panel">
                 <h2>No Matching Records</h2>
                 <p>Try adjusting or resetting your filters.</p>
               </section>
             ) : null}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>              
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div className="panel-heading">
+                <h2>
+                  {mode === MODE_FUNDING ? "Allocation Breakdowns" : "Impact Breakdowns"}
+                </h2>
+              </div>
+
               <section className="ranking-grid single-row">
                 <div className="ranking-panel">
-                  {!usingDefaultFilters && institutionCubeStatus === "loading" ? (
+                  {(mode === MODE_FUNDING &&
+                    !usingDefaultFilters &&
+                    fundingInstitutionCubeStatus === "loading") ||
+                  (mode === MODE_IMPACT &&
+                    !usingDefaultFilters &&
+                    impactInstitutionCubeStatus === "loading") ? (
                     <section className="ranking-panel">
                       <div className="panel-heading">
                         <div>
@@ -407,8 +792,13 @@ export default function App() {
                     </section>
                   ) : (
                     <RankingBars
-                      items={rankingsResolved.institutions}
-                      title="Top Institutions"
+                      emptyLabel={modeCopy.ranking.emptyLabel}
+                      items={modeCopy.ranking.items}
+                      metaRenderer={modeCopy.ranking.metaRenderer}
+                      subtitle={modeCopy.ranking.subtitle}
+                      title={modeCopy.ranking.title}
+                      valueKey={modeCopy.ranking.valueKey}
+                      valueVariant={modeCopy.ranking.valueVariant}
                     />
                   )}
                 </div>
