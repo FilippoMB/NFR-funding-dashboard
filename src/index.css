@@ -76,6 +76,7 @@ h1, h2, h3, h4 {
   margin: 0;
   font-weight: 600;
   letter-spacing: -0.02em;
+  overflow-wrap: break-word;
 }
 
 p { margin: 0; }
@@ -505,6 +506,9 @@ p { margin: 0; }
   font-weight: 600;
   color: var(--color-text-primary);
   display: block;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .signal-item span {

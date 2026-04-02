@@ -82,6 +82,7 @@ export default function TimeSeriesChart({
       className="timeseries-chart"
       role="img"
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      style={{ width: "100%", height: "auto", display: "block" }}
       overflow="visible"
     >
       <path
