@@ -42,6 +42,7 @@ export default function App() {
   const [institutionCubeStatus, setInstitutionCubeStatus] = useState("idle");
   const [status, setStatus] = useState({ type: "loading", message: "" });
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const deferredFilters = useDeferredValue(filters);
 
   useEffect(() => {
@@ -275,18 +276,28 @@ export default function App() {
     <main className="app-shell sidebar-layout">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <h1>NFR Funding</h1>
-          <p>Norwegian research statistics</p>
+          <div>
+            <h1>NFR Funding</h1>
+            <p>Norwegian research statistics</p>
+          </div>
+          <button 
+            className="mobile-filter-toggle" 
+            onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
+          >
+            {isMobileFilterOpen ? "Hide Filters" : "Show Filters"}
+          </button>
         </div>
-        <FilterBar
-          activeFilters={filters}
-          availableFilters={availableFilters}
-          onFilterChange={updateFilter}
-          onReset={resetFilters}
-        />
-        <div className="sidebar-footer">
-          <p>{dashboardData?.summary?.source?.label ?? "Forskningsrådet open data"}</p>
-          <p>Latest year: {dashboardData?.summary?.latestYear ?? "..."}</p>
+        <div className={`sidebar-collapsible ${isMobileFilterOpen ? "is-open" : ""}`}>
+          <FilterBar
+            activeFilters={filters}
+            availableFilters={availableFilters}
+            onFilterChange={updateFilter}
+            onReset={resetFilters}
+          />
+          <div className="sidebar-footer">
+            <p>{dashboardData?.summary?.source?.label ?? "Forskningsrådet open data"}</p>
+            <p>Latest year: {dashboardData?.summary?.latestYear ?? "..."}</p>
+          </div>
         </div>
       </aside>
 
