@@ -1,65 +1,61 @@
-# NFR Funding Stats
+# NFR Funding Dashboard
 
-Static dashboard for Research Council of Norway funding statistics, designed to ship as a GitHub Pages site with no server-side runtime. The current implementation uses React + Vite for the frontend, D3-backed SVG charts, and a Python script that generates static JSON assets for the browser.
+Static GitHub Pages dashboard for Research Council of Norway funding statistics. The site is built with React + Vite and reads prebuilt JSON from `public/data/`; there is no backend runtime.
 
-## What is in the repository
+Repository: `https://github.com/FilippoMB/NFR-funding-dashboard`
 
-- `src/`: React application, filters, KPI strip, choropleth, trend chart, and ranking panels
-- `public/data/`: generated static JSON files used by the app
-- `public/geo/`: county GeoJSON used by the choropleth
-- `data/`: mock raw project records and the aggregation script
-- `.github/workflows/deploy.yml`: GitHub Pages build and deployment workflow
+## Project layout
+
+- `src/`: React UI, filters, maps, charts, and formatting helpers
+- `public/data/`: generated dashboard datasets committed for static hosting
+- `public/geo/`: Norway county GeoJSON used by the choropleth
+- `data/`: Python aggregation script plus mock input for offline testing
+- `.github/workflows/`: CI validation and GitHub Pages deployment
 
 ## Required software
 
-Install these tools before building or deploying:
-
 - `git`
 - `node` 20+ and `npm`
-- `python3` 3.9+ and `uv` for the local Python environment and static data pipeline
-- `gh` optional, for GitHub authentication and workflow inspection
+- `python3` 3.9+ and `uv`
+- `gh` optional but useful for authentication and workflow inspection
 
-### macOS with Homebrew
+macOS/Homebrew:
 
 ```sh
 brew install git node python uv gh
 ```
 
-### Verify the installation
-
-```sh
-git --version
-node --version
-npm --version
-python3 --version
-uv --version
-gh --version
-```
-
 ## Local setup
 
-Clone the repository and install dependencies from the project root:
-
 ```sh
-git clone <repo-url>
-cd NFR-funding-stats
+git clone https://github.com/FilippoMB/NFR-funding-dashboard.git
+cd NFR-funding-dashboard
 npm install
 uv venv .venv
 source .venv/bin/activate
 ```
 
-Keep Python dependencies local to this repository. Prefer `.venv/` managed by `uv`, and do not install Python packages globally.
+Keep Python dependencies local to `.venv/`. Do not install Python packages globally.
 
-Regenerate the static JSON bundles from the mock raw dataset:
+## Daily development
 
-```sh
-npm run data:build
-```
-
-Start the development server:
+Start the app locally:
 
 ```sh
 npm run dev
+```
+
+Rebuild the real dataset from the official Forskningsrådet feed:
+
+```sh
+source .venv/bin/activate
+npm run data:build
+```
+
+Rebuild from the checked-in mock input instead:
+
+```sh
+npm run data:build:mock
 ```
 
 Create a production build:
@@ -68,44 +64,75 @@ Create a production build:
 npm run build
 ```
 
-Preview the production bundle locally:
+Local Pages-style build preview for this repo:
 
 ```sh
+PAGES_REPOSITORY_NAME=NFR-funding-dashboard npm run build
 npm run preview
 ```
 
-## Data pipeline
+## Generated data
 
-The default pipeline reads `data/mock_projects.json` and writes the generated assets to `public/data/`.
-
-```sh
-source .venv/bin/activate
-python3 data/aggregate_funding.py --input data/mock_projects.json --output public/data
-```
-
-You can also point the script at a remote JSON source:
-
-```sh
-python3 data/aggregate_funding.py --source-url <json-endpoint> --output public/data
-```
-
-The generated files are:
+The Python pipeline writes:
 
 - `summary.json`
 - `funding_by_county.json`
 - `funding_timeseries.json`
 - `funding_by_dimension.json`
 - `funding_cube.json`
+- `funding_institution_cube.json`
 
-## Deployment
+`npm run data:build` pulls the official `soknader2` CSV and regenerates `public/data/`. Commit the updated JSON when the upstream dataset changes.
 
-Deployment is handled by GitHub Actions and GitHub Pages. Push to `main` to trigger the workflow in [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml). The Vite configuration sets the production base path for a project site, so the built app can be served from `/<repo-name>/`.
+## GitHub and deployment
 
-Enable GitHub Pages in the repository settings and use the GitHub Actions source.
+If this local repository was created before the GitHub repo existed, attach the remote once:
 
-## Notes
+```sh
+git remote add origin https://github.com/FilippoMB/NFR-funding-dashboard.git
+```
 
-- The current dataset is mocked to unblock UI work.
+Then push the current branch:
+
+```sh
+git push -u origin main
+```
+
+GitHub Actions handles both validation and deployment:
+
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs data rebuild + production build on pushes and pull requests.
+- [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) deploys `dist/` to GitHub Pages on pushes to `main`.
+
+In the GitHub repository settings, enable Pages and choose `GitHub Actions` as the source. After that, every push to `main` will publish the site automatically.
+
+## Maintenance checklist
+
+When changing code:
+
+```sh
+npm run build
+```
+
+When refreshing the dataset:
+
+```sh
+npm run data:build
+npm run build
+git add public/data
+```
+
+Before pushing:
+
+```sh
+git status
+git add .
+git commit -m "Describe the change"
+git push
+```
+
+## Data caveats
+
 - Institution totals reflect the registered project owner.
-- Subject totals may overlap and should not be treated as additive across themes.
-- County geometry is based on Kartverket data via `robhop/fylker-og-kommuner` under CC BY 4.0.
+- Subject totals may overlap and should not be summed as independent categories.
+- The dashboard uses project start year, not annual disbursement year.
+- County geometry is based on Kartverket-derived data via `robhop/fylker-og-kommuner` under CC BY 4.0.

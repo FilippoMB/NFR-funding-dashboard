@@ -23,7 +23,7 @@ function buildAreaPath(points, baseline) {
   return `${linePath} L ${lastPoint.x} ${baseline} L ${firstPoint.x} ${baseline} Z`;
 }
 
-export default function TimeSeriesChart({ data }) {
+export default function TimeSeriesChart({ data, globalMax }) {
   if (!data.length) {
     return (
       <div className="empty-panel">
@@ -35,7 +35,7 @@ export default function TimeSeriesChart({ data }) {
   const innerWidth = WIDTH - MARGIN.left - MARGIN.right;
   const innerHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
   const years = data.map((item) => item.year);
-  const maxValue = Math.max(...data.map((item) => item.totalFundingNok), 1);
+  const maxValue = globalMax || Math.max(...data.map((item) => item.totalFundingNok), 1);
   const xScale = scaleLinear()
     .domain([Math.min(...years), Math.max(...years)])
     .range([MARGIN.left, MARGIN.left + innerWidth]);

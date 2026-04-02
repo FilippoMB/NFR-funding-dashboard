@@ -40,35 +40,71 @@ export default function AllocationPieChart({ items }) {
   }
 
   return (
-    <div style={{ width: '100%', height: 440 }}>
-      <ResponsiveContainer>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="40%"
-            innerRadius={70}
-            outerRadius={100}
-            paddingAngle={5}
-            dataKey="value"
-            stroke="none"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip content={<CustomTooltip />} />
-          <Legend 
-            verticalAlign="bottom" 
-            iconType="circle"
-            wrapperStyle={{
-              fontSize: '0.85rem',
-              color: 'var(--color-text-secondary)',
-              paddingTop: '20px'
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ width: '100%', height: 220, flexShrink: 0 }}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={65}
+              outerRadius={95}
+              paddingAngle={4}
+              dataKey="value"
+              stroke="none"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        gap: "8px", 
+        marginTop: "16px",
+        paddingLeft: "16%"
+      }}>
+        {data.map((entry, index) => (
+          <div 
+            key={`legend-item-${index}`} 
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "10px", 
+              fontSize: "0.85rem", 
+              color: "var(--color-text-secondary)",
+              width: "100%"
             }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+          >
+            <span 
+              style={{ 
+                display: "block", 
+                width: "12px", 
+                height: "12px", 
+                borderRadius: "50%", 
+                backgroundColor: COLORS[index % COLORS.length], 
+                flexShrink: 0 
+              }} 
+            />
+            <span 
+              style={{ 
+                whiteSpace: "nowrap", 
+                overflow: "hidden", 
+                textOverflow: "ellipsis", 
+                flex: 1 
+              }} 
+              title={entry.name}
+            >
+              {entry.name}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

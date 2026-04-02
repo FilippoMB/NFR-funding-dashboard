@@ -110,6 +110,11 @@ p { margin: 0; }
   gap: 4px;
 }
 
+.sidebar-footer p {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
 /* Filter Component */
 .sidebar-filters {
   display: flex;

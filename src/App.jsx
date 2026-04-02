@@ -179,11 +179,25 @@ export default function App() {
         )
       : buildCountySeries(filteredCube, availableFilters.counties)
     : [];
+  const yearAgnosticFilters = { ...deferredFilters, year: ALL_FILTER_VALUE };
+  const yearAgnosticCube = dashboardData
+    ? filterCubeRecords(dashboardData.cube, yearAgnosticFilters)
+    : [];
+  const yearAgnosticTimeseries = dashboardData
+    ? isDefaultFilter(yearAgnosticFilters)
+      ? dashboardData.timeseries
+      : buildTimeseries(yearAgnosticCube, availableFilters.years)
+    : [];
   const timeseries = dashboardData
     ? usingDefaultFilters
       ? dashboardData.timeseries
       : buildTimeseries(filteredCube, availableFilters.years)
-    : [];
+    : [];      
+  const contextualMax = Math.max(
+    ...yearAgnosticTimeseries.map((item) => item.totalFundingNok),
+    1
+  );
+
   const defaultRankings = dashboardData
     ? buildDimensionRankingsFromAggregate(dashboardData.byDimension)
     : { institutions: [], schemes: [], subjects: [] };
@@ -334,7 +348,10 @@ export default function App() {
                       The curve tracks allocated NOK across the selected slice.
                     </p>
                   </div>
-                  <TimeSeriesChart data={timeseries} />
+                  <TimeSeriesChart 
+                    data={timeseries} 
+                    globalMax={contextualMax}
+                  />
                 </div>
 
                 <div className="pie-panels" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
@@ -358,7 +375,7 @@ export default function App() {
               </div>
             </section>
 
-            <section className="kpi-strip u-margin-top">
+            <section className="kpi-strip" style={{ marginTop: "-8px" }}>
               {highlights.map((item) => (
                 <article className="signal-item" key={item.label}>
                   <p>{item.label}</p>
@@ -377,32 +394,34 @@ export default function App() {
               </section>
             ) : null}
 
-            <div className="panel-heading u-margin-top">
-              <h2>Allocation Breakdowns</h2>
-            </div>
-            
-            <section className="ranking-grid single-row">
-              <div className="ranking-panel">
-                {!usingDefaultFilters && institutionCubeStatus === "loading" ? (
-                  <section className="ranking-panel">
-                    <div className="panel-heading">
-                      <div>
-                        <p className="eyebrow">Ranked allocation</p>
-                        <h2>Top Institutions</h2>
-                      </div>
-                    </div>
-                    <div className="empty-panel">
-                      Loading institution ranking for the selected slice.
-                    </div>
-                  </section>
-                ) : (
-                  <RankingBars
-                    items={rankingsResolved.institutions}
-                    title="Top Institutions"
-                  />
-                )}
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div className="panel-heading">
+                <h2>Allocation Breakdowns</h2>
               </div>
-            </section>
+              
+              <section className="ranking-grid single-row">
+                <div className="ranking-panel">
+                  {!usingDefaultFilters && institutionCubeStatus === "loading" ? (
+                    <section className="ranking-panel">
+                      <div className="panel-heading">
+                        <div>
+                          <p className="eyebrow">Ranked allocation</p>
+                          <h2>Top Institutions</h2>
+                        </div>
+                      </div>
+                      <div className="empty-panel">
+                        Loading institution ranking for the selected slice.
+                      </div>
+                    </section>
+                  ) : (
+                    <RankingBars
+                      items={rankingsResolved.institutions}
+                      title="Top Institutions"
+                    />
+                  )}
+                </div>
+              </section>
+            </div>
           </>
         ) : null}
       </section>
