@@ -124,15 +124,12 @@ export default function App() {
   useEffect(() => {
     if (
       !dashboardData ||
-      usingDefaultFilters ||
       dashboardData.institutionCube ||
       institutionCubeStatus === "loading" ||
       institutionCubeStatus === "ready"
     ) {
       return;
     }
-
-    let isMounted = true;
 
     async function loadInstitutionCube() {
       try {
@@ -145,30 +142,18 @@ export default function App() {
 
         const institutionCube = await response.json();
 
-        if (!isMounted) {
-          return;
-        }
-
         setDashboardData((current) =>
           current ? { ...current, institutionCube } : current
         );
         setInstitutionCubeStatus("ready");
       } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
         setInstitutionCubeStatus("error");
         console.error("Institution ranking data could not be loaded.", error);
       }
     }
 
     void loadInstitutionCube();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [dashboardData, institutionCubeStatus, usingDefaultFilters]);
+  }, [dashboardData, institutionCubeStatus]);
 
   const kpis = buildKpis(filteredCube);
   const countySeries = dashboardData
@@ -394,11 +379,7 @@ export default function App() {
               </section>
             ) : null}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div className="panel-heading">
-                <h2>Allocation Breakdowns</h2>
-              </div>
-              
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>              
               <section className="ranking-grid single-row">
                 <div className="ranking-panel">
                   {!usingDefaultFilters && institutionCubeStatus === "loading" ? (
