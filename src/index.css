@@ -478,6 +478,7 @@ p { margin: 0; }
   flex-direction: column;
   gap: 16px;
   margin: 0;
+  margin-bottom: 20px;
   padding: 0;
   list-style: none;
 }
@@ -520,6 +521,52 @@ p { margin: 0; }
   height: 100%;
   background: var(--color-accent-gradient);
   border-radius: 3px;
+}
+
+.ranking-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.ranking-count {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.ranking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ranking-action {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ranking-action:hover {
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
+.ranking-action.is-active {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--color-text-primary);
+  box-shadow: 0 8px 20px rgba(56, 189, 248, 0.14);
 }
 
 /* Status Panels */

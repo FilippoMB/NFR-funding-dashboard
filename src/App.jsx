@@ -544,7 +544,9 @@ export default function App() {
     : { institutions: [], schemes: [], subjects: [] };
   const fundingInstitutionRankings = fundingData
     ? usingDefaultFilters
-      ? fundingDefaultRankings.institutions
+      ? fundingData.institutionCube
+        ? buildInstitutionRankings(fundingData.institutionCube)
+        : fundingDefaultRankings.institutions
       : fundingData.institutionCube
         ? buildInstitutionRankings(
             filterCubeRecords(fundingData.institutionCube, deferredFilters)
@@ -848,8 +850,16 @@ export default function App() {
         emptyLabel: "No institution funding is available for the current filter combination.",
         items: fundingRankings.institutions,
         metaRenderer: (item) => `${formatNumber(item.projectCount)} projects in the selected slice`,
-        subtitle: "Highest-funded project owners in the current funding slice.",
-        title: "Top Institutions",
+        subtitles: {
+          top: "Highest-funded project owners in the current funding slice.",
+          bottom: "Lowest-funded project owners in the current funding slice.",
+          all: "All project owners ranked by funding in the current slice."
+        },
+        titles: {
+          top: "Top Institutions",
+          bottom: "Bottom Institutions",
+          all: "All Institutions"
+        },
         valueKey: "totalFundingNok",
         valueVariant: "currency"
       },
@@ -881,8 +891,16 @@ export default function App() {
         items: impactInstitutionRankings,
         metaRenderer: (item) =>
           `${formatNumber(item.citationCount)} citations · ${formatDecimal(item.citationsPerPaper)} cites/paper`,
-        subtitle: "Most active institutions in the selected publication slice.",
-        title: "Top Institutions",
+        subtitles: {
+          top: "Most active institutions in the selected publication slice.",
+          bottom: "Least active institutions in the selected publication slice.",
+          all: "All institutions ranked by publication activity in the selected slice."
+        },
+        titles: {
+          top: "Top Institutions",
+          bottom: "Bottom Institutions",
+          all: "All Institutions"
+        },
         valueKey: "paperCount",
         valueVariant: "number"
       },
@@ -920,12 +938,28 @@ export default function App() {
           `${formatNumber(item.paperCount)} papers · ${formatCompactCurrency(
             item.fundingNok
           )} matched funding`,
-        subtitle: `Institutions ranked by published papers per MNOK received. Rankings require at least ${
-          efficiencyData?.summary?.minPaperCountForRanking ?? 10
-        } papers and ${formatCompactCurrency(
-          efficiencyData?.summary?.minFundingNokForRanking ?? 10_000_000
-        )} in matched funding.`,
-        title: "Most Efficient Institutions",
+        subtitles: {
+          top: `Institutions ranked by published papers per MNOK received. Rankings require at least ${
+            efficiencyData?.summary?.minPaperCountForRanking ?? 10
+          } papers and ${formatCompactCurrency(
+            efficiencyData?.summary?.minFundingNokForRanking ?? 10_000_000
+          )} in matched funding.`,
+          bottom: `Institutions at the bottom of the papers-per-MNOK ranking. Rankings still require at least ${
+            efficiencyData?.summary?.minPaperCountForRanking ?? 10
+          } papers and ${formatCompactCurrency(
+            efficiencyData?.summary?.minFundingNokForRanking ?? 10_000_000
+          )} in matched funding.`,
+          all: `All ranking-eligible institutions sorted by papers per MNOK. Rankings require at least ${
+            efficiencyData?.summary?.minPaperCountForRanking ?? 10
+          } papers and ${formatCompactCurrency(
+            efficiencyData?.summary?.minFundingNokForRanking ?? 10_000_000
+          )} in matched funding.`
+        },
+        titles: {
+          top: "Most Efficient Institutions",
+          bottom: "Least Efficient Institutions",
+          all: "All Institutions by Efficiency"
+        },
         valueKey: "papersPerMnok",
         valueVariant: "decimal"
       },
@@ -1186,33 +1220,31 @@ export default function App() {
               </div>
 
               <section className="ranking-grid single-row">
-                <div className="ranking-panel">
-                  {(mode === MODE_FUNDING &&
-                    !usingDefaultFilters &&
-                    fundingInstitutionCubeStatus === "loading") ? (
-                    <section className="ranking-panel">
-                      <div className="panel-heading">
-                        <div>
-                          <p className="eyebrow">Ranked allocation</p>
-                          <h2>{modeCopy.ranking.title}</h2>
-                        </div>
+                {(mode === MODE_FUNDING &&
+                  !usingDefaultFilters &&
+                  fundingInstitutionCubeStatus === "loading") ? (
+                  <section className="ranking-panel">
+                    <div className="panel-heading">
+                      <div>
+                        <p className="eyebrow">Ranked allocation</p>
+                        <h2>{modeCopy.ranking.titles?.top ?? modeCopy.ranking.title}</h2>
                       </div>
-                      <div className="empty-panel">
-                        Loading institution ranking for the selected slice.
-                      </div>
-                    </section>
-                  ) : (
-                    <RankingBars
-                      emptyLabel={modeCopy.ranking.emptyLabel}
-                      items={modeCopy.ranking.items}
-                      metaRenderer={modeCopy.ranking.metaRenderer}
-                      subtitle={modeCopy.ranking.subtitle}
-                      title={modeCopy.ranking.title}
-                      valueKey={modeCopy.ranking.valueKey}
-                      valueVariant={modeCopy.ranking.valueVariant}
-                    />
-                  )}
-                </div>
+                    </div>
+                    <div className="empty-panel">
+                      Loading institution ranking for the selected slice.
+                    </div>
+                  </section>
+                ) : (
+                  <RankingBars
+                    emptyLabel={modeCopy.ranking.emptyLabel}
+                    items={modeCopy.ranking.items}
+                    metaRenderer={modeCopy.ranking.metaRenderer}
+                    subtitles={modeCopy.ranking.subtitles}
+                    titles={modeCopy.ranking.titles}
+                    valueKey={modeCopy.ranking.valueKey}
+                    valueVariant={modeCopy.ranking.valueVariant}
+                  />
+                )}
               </section>
             </div>
           </>

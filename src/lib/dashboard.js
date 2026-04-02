@@ -254,8 +254,7 @@ export function buildInstitutionRankings(records) {
   }
 
   return [...buckets.values()]
-    .sort((left, right) => right.totalFundingNok - left.totalFundingNok)
-    .slice(0, 6);
+    .sort((left, right) => right.totalFundingNok - left.totalFundingNok);
 }
 
 export function buildImpactKpis(records) {
@@ -446,14 +445,11 @@ export function buildImpactInstitutionRankings(records) {
   }
 
   return [...buckets.values()]
-    .sort((left, right) => right.paperCount - left.paperCount)
-    .slice(0, 6);
+    .sort((left, right) => right.paperCount - left.paperCount);
 }
 
 export function buildImpactInstitutionRankingsFromAggregate(aggregates) {
-  return [...aggregates]
-    .sort((left, right) => right.paperCount - left.paperCount)
-    .slice(0, 6);
+  return [...aggregates].sort((left, right) => right.paperCount - left.paperCount);
 }
 
 export function buildTopMetricRanking(items, metricKey, topN = 6) {
@@ -693,8 +689,7 @@ export function buildEfficiencyInstitutionRankings(
 
   return [...buckets.values()]
     .filter((item) => item.rankingEligible)
-    .sort((left, right) => right.papersPerMnok - left.papersPerMnok)
-    .slice(0, 6);
+    .sort((left, right) => right.papersPerMnok - left.papersPerMnok);
 }
 
 export function buildEfficiencyInstitutionRankingsFromAggregate(
@@ -709,6 +704,5 @@ export function buildEfficiencyInstitutionRankingsFromAggregate(
         item.paperCount >= minPaperCount &&
         item.rankingEligible !== false
     )
-    .sort((left, right) => right.papersPerMnok - left.papersPerMnok)
-    .slice(0, 6);
+    .sort((left, right) => right.papersPerMnok - left.papersPerMnok);
 }
