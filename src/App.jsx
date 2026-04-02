@@ -1,26 +1,34 @@
-import { startTransition, useDeferredValue, useEffect, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useState
+} from "react";
 import FilterBar from "./components/FilterBar";
 import KpiStrip from "./components/KpiStrip";
 import CountyMap from "./components/charts/CountyMap";
 import RankingBars from "./components/charts/RankingBars";
 import TimeSeriesChart from "./components/charts/TimeSeriesChart";
-import AllocationPieChart from "./components/charts/AllocationPieChart";
 import {
   ALL_FILTER_VALUE,
   buildCountySeries,
   buildCountySeriesFromAggregate,
   buildDimensionRankings,
   buildDimensionRankingsFromAggregate,
+  buildInstitutionRankings,
   buildKpis,
   buildTimeseries,
   filterCubeRecords,
   isDefaultFilter
 } from "./lib/dashboard";
 
+const AllocationPieChart = lazy(() => import("./components/charts/AllocationPieChart"));
+
 const DEFAULT_FILTERS = {
   year: ALL_FILTER_VALUE,
   countyId: ALL_FILTER_VALUE,
-  institutionId: ALL_FILTER_VALUE,
   schemeId: ALL_FILTER_VALUE,
   subjectId: ALL_FILTER_VALUE
 };
@@ -29,28 +37,9 @@ function buildDataUrl(path) {
   return `${import.meta.env.BASE_URL}${path}`;
 }
 
-function resolveOptionLabel(options, value, emptyLabel) {
-  if (value === ALL_FILTER_VALUE) {
-    return emptyLabel;
-  }
-
-  if (!Array.isArray(options)) {
-    return value;
-  }
-
-  const match = options.find((option) =>
-    typeof option === "number" ? String(option) === value : option.id === value
-  );
-
-  if (!match) {
-    return value;
-  }
-
-  return typeof match === "number" ? String(match) : match.label;
-}
-
 export default function App() {
   const [dashboardData, setDashboardData] = useState(null);
+  const [institutionCubeStatus, setInstitutionCubeStatus] = useState("idle");
   const [status, setStatus] = useState({ type: "loading", message: "" });
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const deferredFilters = useDeferredValue(filters);
@@ -93,9 +82,11 @@ export default function App() {
           byDimension,
           countyGeojson,
           cube,
+          institutionCube: null,
           summary,
           timeseries
         });
+        setInstitutionCubeStatus("idle");
         setStatus({ type: "ready", message: "" });
       } catch (error) {
         if (!isMounted) {
@@ -121,7 +112,6 @@ export default function App() {
 
   const availableFilters = dashboardData?.summary.filters ?? {
     counties: [],
-    institutions: [],
     schemes: [],
     subjects: [],
     years: []
@@ -130,6 +120,56 @@ export default function App() {
     ? filterCubeRecords(dashboardData.cube, deferredFilters)
     : [];
   const usingDefaultFilters = isDefaultFilter(deferredFilters);
+
+  useEffect(() => {
+    if (
+      !dashboardData ||
+      usingDefaultFilters ||
+      dashboardData.institutionCube ||
+      institutionCubeStatus === "loading" ||
+      institutionCubeStatus === "ready"
+    ) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadInstitutionCube() {
+      try {
+        setInstitutionCubeStatus("loading");
+        const response = await fetch(buildDataUrl("data/funding_institution_cube.json"));
+
+        if (!response.ok) {
+          throw new Error(`Static asset load failed with ${response.status}.`);
+        }
+
+        const institutionCube = await response.json();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setDashboardData((current) =>
+          current ? { ...current, institutionCube } : current
+        );
+        setInstitutionCubeStatus("ready");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setInstitutionCubeStatus("error");
+        console.error("Institution ranking data could not be loaded.", error);
+      }
+    }
+
+    void loadInstitutionCube();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [dashboardData, institutionCubeStatus, usingDefaultFilters]);
+
   const kpis = buildKpis(filteredCube);
   const countySeries = dashboardData
     ? usingDefaultFilters
@@ -144,11 +184,27 @@ export default function App() {
       ? dashboardData.timeseries
       : buildTimeseries(filteredCube, availableFilters.years)
     : [];
-  const rankings = dashboardData
+  const defaultRankings = dashboardData
+    ? buildDimensionRankingsFromAggregate(dashboardData.byDimension)
+    : { institutions: [], schemes: [], subjects: [] };
+  const dimensionRankings = dashboardData
     ? usingDefaultFilters
-      ? buildDimensionRankingsFromAggregate(dashboardData.byDimension)
+      ? defaultRankings
       : buildDimensionRankings(filteredCube, availableFilters)
     : { institutions: [], schemes: [], subjects: [] };
+  const institutionRankings = dashboardData
+    ? usingDefaultFilters
+      ? defaultRankings.institutions
+      : dashboardData.institutionCube
+        ? buildInstitutionRankings(
+            filterCubeRecords(dashboardData.institutionCube, deferredFilters)
+          )
+        : []
+    : [];
+  const rankingsResolved = {
+    ...dimensionRankings,
+    institutions: institutionRankings
+  };
   const activeCountyId =
     deferredFilters.countyId === ALL_FILTER_VALUE
       ? null
@@ -157,44 +213,6 @@ export default function App() {
     (activeCountyId
       ? countySeries.find((item) => item.countyId === activeCountyId)
       : null) ?? null;
-  const activeScope = [
-    {
-      label: "Year",
-      value: resolveOptionLabel(availableFilters.years, deferredFilters.year, "All years")
-    },
-    {
-      label: "County",
-      value: resolveOptionLabel(
-        availableFilters.counties,
-        deferredFilters.countyId,
-        "All counties"
-      )
-    },
-    {
-      label: "Institution",
-      value: resolveOptionLabel(
-        availableFilters.institutions,
-        deferredFilters.institutionId,
-        "All institutions"
-      )
-    },
-    {
-      label: "Scheme",
-      value: resolveOptionLabel(
-        availableFilters.schemes,
-        deferredFilters.schemeId,
-        "All schemes"
-      )
-    },
-    {
-      label: "Subject",
-      value: resolveOptionLabel(
-        availableFilters.subjects,
-        deferredFilters.subjectId,
-        "All subjects"
-      )
-    }
-  ];
   const leadCounty = countySeries.find((item) => item.totalFundingNok > 0);
   const peakYear =
     timeseries.length > 0
@@ -202,7 +220,7 @@ export default function App() {
           current.totalFundingNok > best.totalFundingNok ? current : best
         )
       : null;
-  const leadInstitution = rankings.institutions[0] ?? null;
+  const leadInstitution = rankingsResolved.institutions[0] ?? null;
   const highlights = [
     {
       label: activeCountyId ? "Selected county" : "Leading county",
@@ -219,10 +237,16 @@ export default function App() {
     },
     {
       label: "Top institution",
-      value: leadInstitution?.label ?? "No data",
-      meta: leadInstitution
-        ? `${leadInstitution.projectCount} projects`
-        : "No institution ranking"
+      value:
+        !usingDefaultFilters && institutionCubeStatus === "loading"
+          ? "Loading…"
+          : leadInstitution?.label ?? "No data",
+      meta:
+        !usingDefaultFilters && institutionCubeStatus === "loading"
+          ? "Fetching institution slices"
+          : leadInstitution
+            ? `${leadInstitution.projectCount} projects`
+            : "No institution ranking"
     }
   ];
 
@@ -262,7 +286,7 @@ export default function App() {
           onReset={resetFilters}
         />
         <div className="sidebar-footer">
-          <p>Data: JSON Mock Build</p>
+          <p>{dashboardData?.summary?.source?.label ?? "Forskningsrådet open data"}</p>
           <p>Latest year: {dashboardData?.summary?.latestYear ?? "..."}</p>
         </div>
       </aside>
@@ -318,13 +342,17 @@ export default function App() {
                     <div className="panel-heading" style={{marginBottom: "8px"}}>
                       <h3>Funding Schemes</h3>
                     </div>
-                    <AllocationPieChart items={rankings.schemes} />
+                    <Suspense fallback={<div className="empty-panel">Loading chart…</div>}>
+                      <AllocationPieChart items={rankingsResolved.schemes} />
+                    </Suspense>
                   </div>
                   <div className="ranking-panel">
                     <div className="panel-heading" style={{marginBottom: "8px"}}>
                       <h3>Subject Fields</h3>
                     </div>
-                    <AllocationPieChart items={rankings.subjects} />
+                    <Suspense fallback={<div className="empty-panel">Loading chart…</div>}>
+                      <AllocationPieChart items={rankingsResolved.subjects} />
+                    </Suspense>
                   </div>
                 </div>
               </div>
@@ -355,10 +383,24 @@ export default function App() {
             
             <section className="ranking-grid single-row">
               <div className="ranking-panel">
-                <RankingBars
-                  items={rankings.institutions}
-                  title="Top Institutions"
-                />
+                {!usingDefaultFilters && institutionCubeStatus === "loading" ? (
+                  <section className="ranking-panel">
+                    <div className="panel-heading">
+                      <div>
+                        <p className="eyebrow">Ranked allocation</p>
+                        <h2>Top Institutions</h2>
+                      </div>
+                    </div>
+                    <div className="empty-panel">
+                      Loading institution ranking for the selected slice.
+                    </div>
+                  </section>
+                ) : (
+                  <RankingBars
+                    items={rankingsResolved.institutions}
+                    title="Top Institutions"
+                  />
+                )}
               </div>
             </section>
           </>

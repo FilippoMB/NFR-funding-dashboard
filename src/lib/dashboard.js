@@ -32,13 +32,6 @@ export function filterCubeRecords(records, filters) {
     }
 
     if (
-      filters.institutionId !== ALL_FILTER_VALUE &&
-      record.institutionId !== filters.institutionId
-    ) {
-      return false;
-    }
-
-    if (
       filters.schemeId !== ALL_FILTER_VALUE &&
       record.schemeId !== filters.schemeId
     ) {
@@ -167,11 +160,6 @@ export function buildTimeseries(records, years) {
 export function buildDimensionRankings(records, filters) {
   const config = [
     {
-      dimension: "institutions",
-      filterKey: "institutionId",
-      labelMap: buildOptionLabelMap(filters.institutions)
-    },
-    {
       dimension: "schemes",
       filterKey: "schemeId",
       labelMap: buildOptionLabelMap(filters.schemes)
@@ -217,4 +205,25 @@ export function buildDimensionRankingsFromAggregate(aggregates) {
     schemes: [...aggregates.schemes],
     subjects: [...aggregates.subjects]
   };
+}
+
+export function buildInstitutionRankings(records) {
+  const buckets = new Map();
+
+  for (const record of records) {
+    const current = buckets.get(record.institutionId) ?? {
+      id: record.institutionId,
+      label: record.institutionName,
+      projectCount: 0,
+      totalFundingNok: 0
+    };
+
+    current.projectCount += record.projectCount;
+    current.totalFundingNok += record.totalFundingNok;
+    buckets.set(record.institutionId, current);
+  }
+
+  return [...buckets.values()]
+    .sort((left, right) => right.totalFundingNok - left.totalFundingNok)
+    .slice(0, 6);
 }

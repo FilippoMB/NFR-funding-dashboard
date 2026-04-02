@@ -22,7 +22,10 @@ function getFeatureMeta(feature) {
     feature.properties.id;
 
   return {
-    countyId: normalizeCountyId(countyName),
+    countyId:
+      feature.properties.fylkesnummer ??
+      feature.properties.id ??
+      normalizeCountyId(countyName),
     countyName
   };
 }

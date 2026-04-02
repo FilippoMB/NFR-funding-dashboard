@@ -2,7 +2,6 @@ import { ALL_FILTER_VALUE } from "../lib/dashboard";
 
 const FILTER_CONFIG = [
   { key: "countyId", label: "County", optionsKey: "counties" },
-  { key: "institutionId", label: "Institution", optionsKey: "institutions" },
   { key: "schemeId", label: "Funding Scheme", optionsKey: "schemes" },
   { key: "subjectId", label: "Subject Field", optionsKey: "subjects" }
 ];

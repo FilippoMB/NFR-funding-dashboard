@@ -20,6 +20,7 @@ OFFICIAL_SOURCE_URL = (
 OFFICIAL_SOURCE_PAGE = (
     "https://github.com/Forskningsradet/open-data/tree/main/datasets/soknader2"
 )
+OFFICIAL_SOURCE_LABEL = "Forskningsrådet open data · soknader2"
 
 CURRENT_COUNTIES = {
     "03": "Oslo",
@@ -322,16 +323,8 @@ def aggregate(
     source_label: str,
     skipped_records: int
 ) -> dict[str, Any]:
-    records = sorted(
-        normalized_records,
-        key=lambda record: (
-            record["year"],
-            record["countyName"],
-            record["institutionName"],
-            record["schemeName"],
-            record["subjectName"]
-        )
-    )
+    core_aggregates: dict[tuple[Any, ...], dict[str, Any]] = {}
+    institution_slice_aggregates: dict[tuple[Any, ...], dict[str, Any]] = {}
     county_aggregates: dict[tuple[str, str], dict[str, Any]] = defaultdict(
         lambda: {"projectCount": 0, "totalFundingNok": 0}
     )
@@ -345,16 +338,65 @@ def aggregate(
     }
 
     county_options: set[tuple[str, str]] = set()
-    institution_options: set[tuple[str, str]] = set()
     scheme_options: set[tuple[str, str]] = set()
     subject_options: set[tuple[str, str]] = set()
-    years = sorted({record["year"] for record in records})
+    years = sorted({record["year"] for record in normalized_records})
 
-    for record in records:
+    for record in normalized_records:
         county_options.add((record["countyId"], record["countyName"]))
-        institution_options.add((record["institutionId"], record["institutionName"]))
         scheme_options.add((record["schemeId"], record["schemeName"]))
         subject_options.add((record["subjectId"], record["subjectName"]))
+
+        core_key = (
+            record["year"],
+            record["countyId"],
+            record["countyName"],
+            record["schemeId"],
+            record["schemeName"],
+            record["subjectId"],
+            record["subjectName"]
+        )
+        core_current = core_aggregates.get(core_key)
+
+        if core_current is None:
+            core_current = {
+                "countyId": record["countyId"],
+                "projectCount": 0,
+                "schemeId": record["schemeId"],
+                "subjectId": record["subjectId"],
+                "totalFundingNok": 0,
+                "year": record["year"]
+            }
+            core_aggregates[core_key] = core_current
+
+        core_current["projectCount"] += record["projectCount"]
+        core_current["totalFundingNok"] += record["totalFundingNok"]
+
+        institution_key = (
+            record["year"],
+            record["countyId"],
+            record["schemeId"],
+            record["subjectId"],
+            record["institutionId"],
+            record["institutionName"]
+        )
+        institution_current = institution_slice_aggregates.get(institution_key)
+
+        if institution_current is None:
+            institution_current = {
+                "countyId": record["countyId"],
+                "institutionId": record["institutionId"],
+                "institutionName": record["institutionName"],
+                "projectCount": 0,
+                "schemeId": record["schemeId"],
+                "subjectId": record["subjectId"],
+                "totalFundingNok": 0,
+                "year": record["year"]
+            }
+            institution_slice_aggregates[institution_key] = institution_current
+
+        institution_current["projectCount"] += record["projectCount"]
+        institution_current["totalFundingNok"] += record["totalFundingNok"]
 
         county_key = (record["countyId"], record["countyName"])
         county_aggregates[county_key]["projectCount"] += record["projectCount"]
@@ -374,8 +416,27 @@ def aggregate(
             dimension_totals[bucket_name][bucket_id]["projectCount"] += record["projectCount"]
             dimension_totals[bucket_name][bucket_id]["totalFundingNok"] += record["totalFundingNok"]
 
-    total_funding = sum(record["totalFundingNok"] for record in records)
-    total_projects = sum(record["projectCount"] for record in records)
+    records = sorted(
+        core_aggregates.values(),
+        key=lambda record: (
+            record["year"],
+            record["countyId"],
+            record["schemeId"],
+            record["subjectId"]
+        )
+    )
+    institution_records = sorted(
+        institution_slice_aggregates.values(),
+        key=lambda record: (
+            record["year"],
+            record["institutionName"],
+            record["countyId"],
+            record["schemeId"],
+            record["subjectId"]
+        )
+    )
+    total_funding = sum(record["totalFundingNok"] for record in normalized_records)
+    total_projects = sum(record["projectCount"] for record in normalized_records)
 
     return {
         "funding_by_county": sorted(
@@ -399,6 +460,7 @@ def aggregate(
             )[:6]
             for dimension, values in dimension_totals.items()
         },
+        "funding_institution_cube": institution_records,
         "funding_cube": records,
         "funding_timeseries": [
             {
@@ -411,7 +473,6 @@ def aggregate(
         "summary": {
             "filters": {
                 "counties": sort_options(county_options),
-                "institutions": sort_options(institution_options),
                 "schemes": sort_options(scheme_options),
                 "subjects": sort_options(subject_options),
                 "years": years
@@ -442,11 +503,18 @@ def write_output(output_dir: Path, payload: dict[str, Any]) -> None:
         ("funding_by_county.json", "funding_by_county"),
         ("funding_timeseries.json", "funding_timeseries"),
         ("funding_by_dimension.json", "funding_by_dimension"),
+        ("funding_institution_cube.json", "funding_institution_cube"),
         ("funding_cube.json", "funding_cube")
     ):
         output_path = output_dir / file_name
         output_path.write_text(
-            json.dumps(payload[key], ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            json.dumps(
+                payload[key],
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True
+            )
+            + "\n",
             encoding="utf-8"
         )
 
@@ -492,7 +560,7 @@ def load_records(args: argparse.Namespace) -> tuple[Iterable[dict[str, Any]], st
 
         raise ValueError(f"Unsupported input format: {input_path.suffix}")
 
-    return iter_csv_records_from_url(args.source_url), args.source_url
+    return iter_csv_records_from_url(args.source_url), OFFICIAL_SOURCE_LABEL
 
 
 def main() -> None:
