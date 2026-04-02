@@ -36,8 +36,8 @@ function RankingItem({
     <li className="ranking-item">
       <span className="rank-index">{String(displayRank).padStart(2, "0")}</span>
       <div className="ranking-labels">
-        <strong>{item.label}</strong>
-        <span>{formatMetricValue(item[valueKey] ?? 0, valueVariant)}</span>
+        <strong className="ranking-name">{item.label}</strong>
+        <span className="ranking-value">{formatMetricValue(item[valueKey] ?? 0, valueVariant)}</span>
       </div>
       <div className="ranking-track" aria-hidden="true">
         <div className="ranking-fill" style={{ width: `${width}%` }} />
