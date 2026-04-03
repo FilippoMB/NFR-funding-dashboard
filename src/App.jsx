@@ -1135,7 +1135,7 @@ export default function App() {
                         ? "#34d399"
                         : mode === MODE_IMPACT
                           ? "#38bdf8"
-                          : "#f87171"
+                          : "#a78bfa"
                     }
                     secondaryKey={mode === MODE_EFFICIENCY ? "fundingNok" : null}
                     secondaryLabel={mode === MODE_EFFICIENCY ? "NOK funding" : ""}

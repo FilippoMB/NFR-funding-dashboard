@@ -47,12 +47,12 @@
   --color-accent-rgb: 56, 189, 248;
 }
 
-/* Red/warm accent for Efficiency mode */
+/* Purple accent for Efficiency mode */
 [data-mode="efficiency"] {
-  --color-accent: #f87171;
-  --color-accent-glow: rgba(248, 113, 113, 0.35);
-  --color-accent-gradient: linear-gradient(135deg, #dc2626, #f87171);
-  --color-accent-rgb: 248, 113, 113;
+  --color-accent: #a78bfa;
+  --color-accent-glow: rgba(167, 139, 250, 0.35);
+  --color-accent-gradient: linear-gradient(135deg, #7c3aed, #a78bfa);
+  --color-accent-rgb: 167, 139, 250;
 }
 
 html, body {
@@ -441,8 +441,7 @@ p { margin: 0; }
 }
 
 .map-stage.map-enlarged {
-  flex: 1;
-  min-height: 500px;
+  height: 750px;
 }
 
 .county-map {
@@ -506,7 +505,7 @@ p { margin: 0; }
 .kpi-item, .signal-item {
   position: relative;
   overflow: hidden;
-  height: 154px;
+  height: 160px;
   display: flex;
   flex-direction: column;
   justify-content: center;

@@ -7,8 +7,8 @@ import {
   formatNumber
 } from "../../lib/formatters";
 
-const VIEWBOX_WIDTH = 560;
-const VIEWBOX_HEIGHT = 860;
+const VIEWBOX_WIDTH = 400;
+const VIEWBOX_HEIGHT = 720;
 
 function normalizeCountyId(value) {
   return value
@@ -96,8 +96,8 @@ export default function CountyMap({
   const projection = geoMercator()
     .fitExtent(
       [
-        [10, 10],
-        [VIEWBOX_WIDTH - 10, VIEWBOX_HEIGHT - 10]
+        [5, 5],
+        [VIEWBOX_WIDTH - 5, VIEWBOX_HEIGHT - 5]
       ],
       rewoundGeojson
     );
