@@ -468,11 +468,28 @@ p { margin: 0; }
   stroke: #0f172a;
 }
 
+.county-label circle {
+  fill: var(--color-text-primary);
+  stroke: #020617;
+  stroke-width: 1.5px;
+}
+
+.county-label line {
+  stroke: var(--color-text-primary);
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+}
+
 .county-label text {
   font-size: 1.25rem;
   fill: var(--color-text-primary);
-  font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  font-weight: 700;
+  paint-order: stroke fill;
+  stroke: #020617;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px var(--color-accent)) 
+          drop-shadow(0 0 10px var(--color-accent-glow));
 }
 
 /* Signals & KPIs */
