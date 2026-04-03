@@ -253,6 +253,14 @@ def normalize_record(record: dict[str, Any]) -> dict[str, Any] | None:
         year = parse_year(record.get("year"))
         county_name = clean_text(record.get("county_name"))
         institution_name = clean_text(record.get("institution_name"))
+        institution_short_name = (
+            clean_text(record.get("institution_short_name"))
+            or institution_name
+        )
+        institution_legal_name = (
+            clean_text(record.get("institution_legal_name"))
+            or institution_name
+        )
         scheme_name = clean_text(record.get("scheme_name"))
         subject_name = clean_text(record.get("subject_name"))
 
@@ -265,6 +273,8 @@ def normalize_record(record: dict[str, Any]) -> dict[str, Any] | None:
             "id": clean_text(record.get("id")),
             "institutionId": clean_text(record.get("institution_id")) or slugify(institution_name),
             "institutionName": institution_name or "Ukjent prosjektansvarlig",
+            "institutionShortName": institution_short_name or "Ukjent prosjektansvarlig",
+            "institutionLegalName": institution_legal_name or "Ukjent prosjektansvarlig",
             "projectCount": int(record.get("project_count", 1)),
             "schemeId": clean_text(record.get("scheme_id")) or slugify(scheme_name),
             "schemeName": scheme_name or "Ukjent ordning",
@@ -287,6 +297,8 @@ def normalize_record(record: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
     institution_id, institution_name = resolve_institution(record)
+    institution_short_name = clean_text(record.get("kortnavn")) or institution_name
+    institution_legal_name = clean_text(record.get("prosjektansvarlig_navn")) or institution_name
     scheme_id, scheme_name = resolve_scheme(record)
     subject_id, subject_name = resolve_subject(record)
     project_id = clean_text(record.get("prosjektnummer"))
@@ -300,6 +312,8 @@ def normalize_record(record: dict[str, Any]) -> dict[str, Any] | None:
         "id": project_id,
         "institutionId": institution_id,
         "institutionName": institution_name,
+        "institutionShortName": institution_short_name,
+        "institutionLegalName": institution_legal_name,
         "projectCount": 1,
         "schemeId": scheme_id,
         "schemeName": scheme_name,
@@ -378,15 +392,20 @@ def aggregate(
             record["schemeId"],
             record["subjectId"],
             record["institutionId"],
-            record["institutionName"]
+            record["institutionName"],
+            record["institutionShortName"],
+            record["institutionLegalName"],
         )
         institution_current = institution_slice_aggregates.get(institution_key)
 
         if institution_current is None:
             institution_current = {
                 "countyId": record["countyId"],
+                "countyName": record["countyName"],
                 "institutionId": record["institutionId"],
                 "institutionName": record["institutionName"],
+                "institutionShortName": record["institutionShortName"],
+                "institutionLegalName": record["institutionLegalName"],
                 "projectCount": 0,
                 "schemeId": record["schemeId"],
                 "subjectId": record["subjectId"],

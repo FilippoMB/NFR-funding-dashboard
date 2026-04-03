@@ -16,7 +16,65 @@ DEFAULT_IMPACT_DIR = "public/data/impact"
 DEFAULT_MIN_FUNDING_NOK = 10_000_000
 DEFAULT_MIN_PAPER_COUNT = 10
 
-MANUAL_INSTITUTION_ALIASES = {
+LEGAL_NAME_ALIASES = {
+    "universitetet i oslo": "university of oslo",
+    "norges teknisk naturvitenskapelige universitet ntnu": (
+        "norwegian university of science and technology"
+    ),
+    "universitetet i bergen": "university of bergen",
+    "universitetet i tromso norges arktiske universitet": (
+        "uit the arctic university of norway"
+    ),
+    "institutt for energiteknikk sti": "institute for energy technology",
+    "nibio norsk institutt for biookonomi": "norwegian institute of bioeconomy research",
+    "norges miljo og biovitenskapelige universitet nmbu": (
+        "norwegian university of life sciences"
+    ),
+    "simula research laboratory as": "simula research laboratory",
+    "oslo universitetssykehus hf": "oslo university hospital",
+    "havforskningsinstituttet": "norwegian institute of marine research",
+    "norsk institutt for vannforskning sti": "norwegian institute for water research",
+    "stiftelsen norsk institutt for naturforskning nina": (
+        "norwegian institute for nature research"
+    ),
+    "folkehelseinstituttet": "norwegian institute of public health",
+    "oslomet storbyuniversitetet": "oslomet oslo metropolitan university",
+    "institutt for fredsforskning sti": "peace research institute oslo",
+    "universitetet i stavanger": "university of stavanger",
+    "stiftelsen norges geotekniske institutt": "norwegian geotechnical institute",
+    "veterinaerinstituttet": "norwegian veterinary institute",
+    "transportokonomisk institutt stiftelsen norsk senter for samferdselsforskning": (
+        "institute of transport economics"
+    ),
+    "institutt for samfunnsforskning sti": "institute for social research",
+    "norsk utenrikspolitisk institutt": "norwegian institute of international affairs",
+    "forskningsstiftelsen nifu": (
+        "nifu nordic institute for studies in innovation research and education"
+    ),
+    "chr michelsens institutt for videnskap og andsfrihet sti": (
+        "chr michelsen institute"
+    ),
+    "universitetet i agder": "university of agder",
+    "hogskulen pa vestlandet": "western norway university of applied sciences",
+    "universitetet i sorost norge": "university of south eastern norway",
+    "norges handelshoyskole": "norwegian school of economics",
+    "stiftelsen norsk institutt for kulturminneforskning": (
+        "norwegian institute for cultural heritage research"
+    ),
+    "meteorologisk institutt": "norwegian meteorological institute",
+    "universitetssykehuset nord norge hf": "university hospital of north norway",
+    "akershus universitetssykehus hf": "akershus university hospital",
+    "forsvarets forskningsinstitutt": "norwegian defence research establishment",
+    "norges geologiske undersokelse": "geological survey of norway",
+    "vid vitenskapelige hogskole as": "vid specialized university",
+    "trondelag forskning og utvikling as": "trondelag forskning og utvikling norway",
+    "statens arbeidsmiljoinstitutt": "national institute of occupational health",
+    "statistisk sentralbyra": "statistics norway",
+    "dnv as": "dnv norway",
+}
+
+SHORT_NAME_ALLOWLIST = {
+    "sintef": "sintef",
     "uio": "university of oslo",
     "ntnu": "norwegian university of science and technology",
     "uib": "university of bergen",
@@ -49,10 +107,31 @@ MANUAL_INSTITUTION_ALIASES = {
     "usn": "university of south eastern norway",
     "nhh": "norwegian school of economics",
     "niku": "norwegian institute for cultural heritage research",
-    "dnv": "det norske veritas",
+    "dnv": "dnv norway",
     "met": "norwegian meteorological institute",
     "unn": "university hospital of north norway",
     "ntnusamf": "norwegian university of science and technology",
+    "ahus": "akershus university hospital",
+    "ffi": "norwegian defence research establishment",
+    "ngu": "geological survey of norway",
+    "vid": "vid specialized university",
+    "tfou": "trondelag forskning og utvikling norway",
+    "stami": "national institute of occupational health",
+    "ssb": "statistics norway",
+}
+
+BLOCKED_FUNDING_REASON = (
+    "Ambiguous short-name match; excluded until audited against a direct OpenAlex mapping."
+)
+
+BLOCKED_FUNDING_LEGAL_NAMES = {
+    "ge vingmed ultrasound as": BLOCKED_FUNDING_REASON,
+    "ge healthcare as": BLOCKED_FUNDING_REASON,
+    "ge healthcare as avd lindesnes": BLOCKED_FUNDING_REASON,
+}
+
+BLOCKED_FUNDING_SHORT_NAMES = {
+    "ge": BLOCKED_FUNDING_REASON,
 }
 
 
@@ -126,14 +205,87 @@ def build_impact_lookup(impact_institutions: list[dict[str, Any]]) -> dict[str, 
     lookup: dict[str, dict[str, Any]] = {}
 
     def register(key: str, institution: dict[str, Any]) -> None:
-      normalized_key = normalize_name(key)
+        normalized_key = normalize_name(key)
 
-      if not normalized_key:
-          return
+        if not normalized_key:
+            return
 
-      existing = lookup.get(normalized_key)
-      if existing is None or institution.get("paperCount", 0) > existing.get("paperCount", 0):
-          lookup[normalized_key] = institution
+        existing = lookup.get(normalized_key)
+        if existing is None or institution.get("paperCount", 0) > existing.get("paperCount", 0):
+            lookup[normalized_key] = institution
+
+    for institution in impact_institutions:
+        register(institution.get("name", ""), institution)
+
+    return lookup
+
+
+def resolve_impact_institution(
+    funding_row: dict[str, Any],
+    impact_lookup: dict[str, dict[str, Any]],
+    audit_candidate_lookup: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Any] | None, str | None, dict[str, Any] | None]:
+    legal_name = normalize_name(
+        funding_row.get("institutionLegalName") or funding_row.get("institutionName")
+    )
+    short_name = normalize_name(
+        funding_row.get("institutionShortName") or funding_row.get("institutionName")
+    )
+
+    if legal_name in impact_lookup:
+        return impact_lookup[legal_name], "legal_name_exact", None
+
+    alias_target = LEGAL_NAME_ALIASES.get(legal_name)
+    normalized_alias_target = normalize_name(alias_target) if alias_target else ""
+    if normalized_alias_target in impact_lookup:
+        return impact_lookup[normalized_alias_target], "legal_name_alias", None
+
+    blocked_reason = (
+        BLOCKED_FUNDING_LEGAL_NAMES.get(legal_name)
+        or BLOCKED_FUNDING_SHORT_NAMES.get(short_name)
+    )
+    if blocked_reason:
+        candidate = audit_candidate_lookup.get(short_name) or audit_candidate_lookup.get(legal_name)
+        return None, None, {
+            "candidateOpenAlexId": candidate.get("id") if candidate else None,
+            "candidateOpenAlexName": candidate.get("name") if candidate else None,
+            "countyId": funding_row.get("countyId"),
+            "fundingNok": funding_row.get("totalFundingNok", 0),
+            "institutionLegalName": (
+                funding_row.get("institutionLegalName")
+                or funding_row.get("institutionName")
+                or "Ukjent prosjektansvarlig"
+            ),
+            "institutionShortName": (
+                funding_row.get("institutionShortName")
+                or funding_row.get("institutionName")
+                or "Ukjent prosjektansvarlig"
+            ),
+            "reason": blocked_reason,
+        }
+
+    allowlist_target = SHORT_NAME_ALLOWLIST.get(short_name)
+    normalized_allowlist_target = normalize_name(allowlist_target) if allowlist_target else ""
+    if normalized_allowlist_target in impact_lookup:
+        return impact_lookup[normalized_allowlist_target], "short_name_allowlist", None
+
+    return None, None, None
+
+
+def build_audit_candidate_lookup(
+    impact_institutions: list[dict[str, Any]]
+) -> dict[str, dict[str, Any]]:
+    lookup: dict[str, dict[str, Any]] = {}
+
+    def register(key: str, institution: dict[str, Any]) -> None:
+        normalized_key = normalize_name(key)
+
+        if not normalized_key:
+            return
+
+        existing = lookup.get(normalized_key)
+        if existing is None or institution.get("paperCount", 0) > existing.get("paperCount", 0):
+            lookup[normalized_key] = institution
 
     for institution in impact_institutions:
         register(institution.get("name", ""), institution)
@@ -144,20 +296,41 @@ def build_impact_lookup(impact_institutions: list[dict[str, Any]]) -> dict[str, 
     return lookup
 
 
-def resolve_impact_institution(
-    funding_name: str,
-    impact_lookup: dict[str, dict[str, Any]]
-) -> tuple[dict[str, Any] | None, str | None]:
-    normalized_funding_name = normalize_name(funding_name)
+def round_metric(value: float) -> float:
+    rounded = round(float(value), 6)
+    return 0.0 if abs(rounded) < 1e-9 else rounded
 
-    if normalized_funding_name in impact_lookup:
-        return impact_lookup[normalized_funding_name], "normalized_name"
 
-    alias_target = MANUAL_INSTITUTION_ALIASES.get(normalized_funding_name)
-    if alias_target and alias_target in impact_lookup:
-        return impact_lookup[alias_target], "manual_alias"
+def allocate_metric_by_funding(
+    rows: list[dict[str, Any]],
+    metric_key: str,
+    total_metric: float,
+) -> None:
+    total_funding = sum(row["fundingNok"] for row in rows)
 
-    return None, None
+    if total_funding <= 0 or total_metric <= 0:
+        for row in rows:
+            row[metric_key] = 0.0
+        return
+
+    remaining_metric = float(total_metric)
+    sorted_rows = sorted(
+        rows,
+        key=lambda item: (
+            item.get("countyId") or "",
+            item.get("countyName") or "",
+            item["institutionId"],
+        ),
+    )
+
+    for index, row in enumerate(sorted_rows):
+        if index == len(sorted_rows) - 1:
+            allocation = remaining_metric
+        else:
+            allocation = round_metric(total_metric * safe_ratio(row["fundingNok"], total_funding))
+            remaining_metric = round_metric(remaining_metric - allocation)
+
+        row[metric_key] = round_metric(allocation)
 
 
 def aggregate_funding_by_county(
@@ -207,39 +380,92 @@ def aggregate_impact_by_county(
 
 
 def aggregate_efficiency_timeseries(
-    funding_cube: list[dict[str, Any]],
-    impact_cube: list[dict[str, Any]],
+    institution_cube: list[dict[str, Any]],
     overlap_years: list[int]
 ) -> list[dict[str, Any]]:
-    funding_by_year = defaultdict(int)
-    impact_by_year = defaultdict(lambda: {"citationCount": 0, "paperCount": 0})
-
-    for row in funding_cube:
-        if row["year"] in overlap_years:
-            funding_by_year[row["year"]] += row["totalFundingNok"]
-
-    for row in impact_cube:
-        if row["year"] in overlap_years:
-            impact_by_year[row["year"]]["paperCount"] += row["paperCount"]
-            impact_by_year[row["year"]]["citationCount"] += row["citationCount"]
-
-    return [
-        {
-            "citationCount": impact_by_year[year]["citationCount"],
-            "citationsPerMnok": citations_per_mnok(
-                impact_by_year[year]["citationCount"],
-                funding_by_year[year]
-            ),
-            "fundingNok": funding_by_year[year],
-            "paperCount": impact_by_year[year]["paperCount"],
-            "papersPerMnok": papers_per_mnok(
-                impact_by_year[year]["paperCount"],
-                funding_by_year[year]
-            ),
-            "year": year,
-        }
+    year_totals = {
+        year: {"citationCount": 0.0, "fundingNok": 0, "paperCount": 0.0, "year": year}
         for year in overlap_years
-    ]
+    }
+
+    for row in institution_cube:
+        current = year_totals.get(row["year"])
+
+        if current is None:
+            continue
+
+        current["fundingNok"] += row["fundingNok"]
+        current["paperCount"] += row["paperCount"]
+        current["citationCount"] += row["citationCount"]
+
+    timeseries = []
+    for year in overlap_years:
+        current = year_totals[year]
+        paper_count = round_metric(current["paperCount"])
+        citation_count = round_metric(current["citationCount"])
+        funding_nok = current["fundingNok"]
+        timeseries.append(
+            {
+                "citationCount": citation_count,
+                "citationsPerMnok": citations_per_mnok(citation_count, funding_nok),
+                "fundingNok": funding_nok,
+                "paperCount": paper_count,
+                "papersPerMnok": papers_per_mnok(paper_count, funding_nok),
+                "year": year,
+            }
+        )
+
+    return timeseries
+
+
+def aggregate_efficiency_by_county(
+    institution_cube: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    county_totals: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {
+            "citationCount": 0.0,
+            "countyId": None,
+            "countyName": "",
+            "fundingNok": 0,
+            "institutionIds": set(),
+            "paperCount": 0.0,
+        }
+    )
+
+    for row in institution_cube:
+        county_id = row.get("countyId")
+
+        if not county_id:
+            continue
+
+        current = county_totals[county_id]
+        current["countyId"] = county_id
+        current["countyName"] = row.get("countyName", current["countyName"])
+        current["fundingNok"] += row["fundingNok"]
+        current["paperCount"] += row["paperCount"]
+        current["citationCount"] += row["citationCount"]
+        current["institutionIds"].add(row["institutionId"])
+
+    by_county = []
+    for current in county_totals.values():
+        paper_count = round_metric(current["paperCount"])
+        citation_count = round_metric(current["citationCount"])
+        funding_nok = current["fundingNok"]
+        by_county.append(
+            {
+                "citationCount": citation_count,
+                "citationsPerMnok": citations_per_mnok(citation_count, funding_nok),
+                "countyId": current["countyId"],
+                "countyName": current["countyName"],
+                "fundingNok": funding_nok,
+                "institutionCount": len(current["institutionIds"]),
+                "paperCount": paper_count,
+                "papersPerMnok": papers_per_mnok(paper_count, funding_nok),
+            }
+        )
+
+    by_county.sort(key=lambda item: item["papersPerMnok"], reverse=True)
+    return by_county
 
 
 def aggregate_institutions(
@@ -249,38 +475,75 @@ def aggregate_institutions(
     overlap_years: set[int],
     min_funding_nok: int,
     min_paper_count: int
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+]:
     impact_lookup = build_impact_lookup(impact_institutions)
+    audit_candidate_lookup = build_audit_candidate_lookup(impact_institutions)
 
     funding_joined: dict[str, dict[str, Any]] = {}
     unmatched_funding: dict[str, dict[str, Any]] = defaultdict(
         lambda: {"counties": set(), "fundingNok": 0}
+    )
+    blocked_funding: dict[str, dict[str, Any]] = {}
+    impact_by_institution_year: dict[str, dict[str, float]] = defaultdict(
+        lambda: {"citationCount": 0.0, "paperCount": 0.0}
     )
 
     for row in funding_institution_cube:
         if row["year"] not in overlap_years:
             continue
 
-        impact_institution, matched_by = resolve_impact_institution(
-            row["institutionName"],
-            impact_lookup
+        impact_institution, matched_by, blocked_record = resolve_impact_institution(
+            row,
+            impact_lookup,
+            audit_candidate_lookup,
         )
 
+        if blocked_record is not None:
+            blocked_key = (
+                f"{blocked_record['institutionShortName']}::"
+                f"{blocked_record['institutionLegalName']}"
+            )
+            current = blocked_funding.get(blocked_key)
+
+            if current is None:
+                current = {
+                    "candidateOpenAlexId": blocked_record["candidateOpenAlexId"],
+                    "candidateOpenAlexName": blocked_record["candidateOpenAlexName"],
+                    "countyIds": set(),
+                    "fundingNok": 0,
+                    "institutionLegalName": blocked_record["institutionLegalName"],
+                    "institutionShortName": blocked_record["institutionShortName"],
+                    "reason": blocked_record["reason"],
+                }
+                blocked_funding[blocked_key] = current
+
+            current["fundingNok"] += blocked_record["fundingNok"]
+            if blocked_record["countyId"]:
+                current["countyIds"].add(blocked_record["countyId"])
+            continue
+
         if impact_institution is None:
-            unmatched = unmatched_funding[row["institutionName"]]
+            unmatched = unmatched_funding[
+                row.get("institutionLegalName") or row["institutionName"]
+            ]
             unmatched["fundingNok"] += row["totalFundingNok"]
             unmatched["counties"].add(row["countyId"])
             continue
 
-        key = f"{impact_institution['id']}::{row['year']}"
+        key = f"{impact_institution['id']}::{row['year']}::{row['countyId']}"
         current = funding_joined.get(key)
 
         if current is None:
             current = {
                 "citationCount": 0,
                 "citationsPerMnok": 0.0,
-                "countyId": impact_institution.get("countyId") or row["countyId"],
-                "countyName": impact_institution.get("countyName") or row.get("countyName"),
+                "countyId": row["countyId"],
+                "countyName": row.get("countyName"),
                 "fundingNok": 0,
                 "id": impact_institution["id"],
                 "institutionId": impact_institution["id"],
@@ -299,25 +562,35 @@ def aggregate_institutions(
             continue
 
         key = f"{row['institutionId']}::{row['year']}"
-        current = funding_joined.get(key)
+        impact_by_institution_year[key]["paperCount"] += row["paperCount"]
+        impact_by_institution_year[key]["citationCount"] += row["citationCount"]
 
-        if current is None:
-            continue
+    rows_by_institution_year: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in funding_joined.values():
+        rows_by_institution_year[f"{row['institutionId']}::{row['year']}"].append(row)
 
-        current["paperCount"] += row["paperCount"]
-        current["citationCount"] += row["citationCount"]
+    for key, rows in rows_by_institution_year.items():
+        impact_row = impact_by_institution_year.get(key, {})
+        allocate_metric_by_funding(rows, "paperCount", impact_row.get("paperCount", 0.0))
+        allocate_metric_by_funding(rows, "citationCount", impact_row.get("citationCount", 0.0))
 
     institution_cube = sorted(
         (
             {
                 **row,
+                "citationCount": round_metric(row["citationCount"]),
                 "citationsPerMnok": citations_per_mnok(row["citationCount"], row["fundingNok"]),
+                "paperCount": round_metric(row["paperCount"]),
                 "papersPerMnok": papers_per_mnok(row["paperCount"], row["fundingNok"]),
             }
             for row in funding_joined.values()
             if row["fundingNok"] > 0
         ),
-        key=lambda item: (item["year"], item["institutionName"].lower()),
+        key=lambda item: (
+            item["year"],
+            item["institutionName"].lower(),
+            item["countyId"] or "",
+        ),
     )
 
     institution_aggregates: dict[str, dict[str, Any]] = {}
@@ -330,20 +603,30 @@ def aggregate_institutions(
                 "citationsPerMnok": 0.0,
                 "countyId": row["countyId"],
                 "countyName": row["countyName"],
+                "countyIds": set(),
                 "fundingNok": 0,
                 "id": row["institutionId"],
                 "label": row["institutionName"],
                 "matchedBy": row["matchedBy"],
                 "paperCount": 0,
                 "papersPerMnok": 0.0,
+                "primaryCountyFundingNok": 0,
             }
             institution_aggregates[row["institutionId"]] = current
 
         current["fundingNok"] += row["fundingNok"]
         current["paperCount"] += row["paperCount"]
         current["citationCount"] += row["citationCount"]
+        if row.get("countyId"):
+            current["countyIds"].add(row["countyId"])
+        if row["fundingNok"] > current["primaryCountyFundingNok"]:
+            current["countyId"] = row["countyId"]
+            current["countyName"] = row["countyName"]
+            current["primaryCountyFundingNok"] = row["fundingNok"]
 
     for current in institution_aggregates.values():
+        current["paperCount"] = round_metric(current["paperCount"])
+        current["citationCount"] = round_metric(current["citationCount"])
         current["papersPerMnok"] = papers_per_mnok(
             current["paperCount"],
             current["fundingNok"]
@@ -356,6 +639,8 @@ def aggregate_institutions(
             current["fundingNok"] >= min_funding_nok
             and current["paperCount"] >= min_paper_count
         )
+        current["countyIds"] = sorted(current["countyIds"])
+        current.pop("primaryCountyFundingNok", None)
 
     by_institution = sorted(
         institution_aggregates.values(),
@@ -381,7 +666,24 @@ def aggregate_institutions(
         reverse=True,
     )
 
-    return by_institution, institution_cube, unmatched_funding_institutions
+    blocked_funding_institutions = sorted(
+        (
+            {
+                **values,
+                "countyIds": sorted(values["countyIds"]),
+            }
+            for values in blocked_funding.values()
+        ),
+        key=lambda item: item["fundingNok"],
+        reverse=True,
+    )
+
+    return (
+        by_institution,
+        institution_cube,
+        unmatched_funding_institutions,
+        blocked_funding_institutions,
+    )
 
 
 def write_output(output_dir: Path, payload: dict[str, Any]) -> None:
@@ -393,6 +695,7 @@ def write_output(output_dir: Path, payload: dict[str, Any]) -> None:
         ("by_institution.json", "by_institution"),
         ("institution_cube.json", "institution_cube"),
         ("timeseries.json", "timeseries"),
+        ("blocked_funding_institutions.json", "blocked_funding_institutions"),
         ("unmatched_funding_institutions.json", "unmatched_funding_institutions"),
     ):
         (output_dir / file_name).write_text(
@@ -425,9 +728,7 @@ def main() -> None:
     )
     overlap_year_set = set(overlap_years)
 
-    funding_by_county = aggregate_funding_by_county(funding_cube, overlap_year_set)
-    impact_by_county = aggregate_impact_by_county(impact_institution_cube, overlap_year_set)
-    by_institution, institution_cube, unmatched_funding_institutions = aggregate_institutions(
+    by_institution, institution_cube, unmatched_funding_institutions, blocked_funding_institutions = aggregate_institutions(
         funding_institution_cube=funding_institution_cube,
         impact_institution_cube=impact_institution_cube,
         impact_institutions=impact_institutions,
@@ -435,35 +736,8 @@ def main() -> None:
         min_funding_nok=args.min_funding_nok,
         min_paper_count=args.min_paper_count,
     )
-
-    county_ids = sorted(set(funding_by_county.keys()) | set(impact_by_county.keys()))
-    by_county = []
-    for county_id in county_ids:
-        funding_row = funding_by_county.get(county_id, {})
-        impact_row = impact_by_county.get(county_id, {})
-        funding_nok = funding_row.get("fundingNok", 0)
-        paper_count = impact_row.get("paperCount", 0)
-        citation_count = impact_row.get("citationCount", 0)
-        by_county.append(
-            {
-                "citationCount": citation_count,
-                "citationsPerMnok": citations_per_mnok(citation_count, funding_nok),
-                "countyId": county_id,
-                "countyName": funding_row.get("countyName") or impact_row.get("countyName"),
-                "fundingNok": funding_nok,
-                "institutionCount": impact_row.get("institutionCount", 0),
-                "paperCount": paper_count,
-                "papersPerMnok": papers_per_mnok(paper_count, funding_nok),
-            }
-        )
-
-    by_county.sort(key=lambda item: item["papersPerMnok"], reverse=True)
-
-    timeseries = aggregate_efficiency_timeseries(
-        funding_cube=funding_cube,
-        impact_cube=impact_institution_cube,
-        overlap_years=overlap_years,
-    )
+    by_county = aggregate_efficiency_by_county(institution_cube)
+    timeseries = aggregate_efficiency_timeseries(institution_cube, overlap_years)
 
     matched_institutions = [item for item in by_institution if item["fundingNok"] > 0]
     matched_eligible = [item for item in by_institution if item["rankingEligible"]]
@@ -486,7 +760,9 @@ def main() -> None:
             "notes": [
                 "Efficiency is defined as published papers divided by funding in MNOK over the overlapping funding/OpenAlex year window.",
                 "The current efficiency dataset uses only years present in both sources.",
-                "Institution joins combine exact normalized-name matches, OpenAlex acronyms, and a curated alias table for major Norwegian institutions.",
+                "Institution joins use exact legal-name matches, explicit legal-name aliases, and an audited short-name allowlist.",
+                "Ambiguous short-name matches are excluded from efficiency outputs until they are manually audited.",
+                "Institution-year outputs are allocated across matched funding counties in proportion to each county row's share of funding.",
                 "Ranking eligibility requires both a minimum funding level and a minimum paper count to reduce small-denominator distortions.",
             ],
             "overlapYearStart": overlap_years[0] if overlap_years else None,
@@ -503,6 +779,7 @@ def main() -> None:
         },
         "by_county": by_county,
         "by_institution": by_institution,
+        "blocked_funding_institutions": blocked_funding_institutions,
         "institution_cube": institution_cube,
         "timeseries": timeseries,
         "unmatched_funding_institutions": unmatched_funding_institutions,
