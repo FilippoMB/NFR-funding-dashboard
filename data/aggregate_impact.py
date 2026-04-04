@@ -14,62 +14,13 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
+from county_utils import CURRENT_COUNTIES, county_tuple_from_name
+
 
 OPENALEX_API_URL = "https://api.openalex.org/institutions"
 OPENALEX_DOCS_URL = "https://docs.openalex.org/"
 OPENALEX_SOURCE_LABEL = "OpenAlex institutions API"
 DEFAULT_OUTPUT_DIR = "public/data/impact"
-
-CURRENT_COUNTIES = {
-    "03": "Oslo",
-    "11": "Rogaland",
-    "15": "Møre og Romsdal",
-    "18": "Nordland",
-    "31": "Østfold",
-    "32": "Akershus",
-    "33": "Buskerud",
-    "34": "Innlandet",
-    "39": "Vestfold",
-    "40": "Telemark",
-    "42": "Agder",
-    "46": "Vestland",
-    "50": "Trøndelag",
-    "55": "Troms",
-    "56": "Finnmark",
-}
-
-LEGACY_COUNTY_NAMES = {
-    "Akershus": "Akershus",
-    "Agder": "Agder",
-    "Aust-Agder": "Agder",
-    "Buskerud": "Buskerud",
-    "Finnmark": "Finnmark",
-    "Finnmark - Finnmárku - Finmarkku": "Finnmark",
-    "Hedmark": "Innlandet",
-    "Hordaland": "Vestland",
-    "Innlandet": "Innlandet",
-    "Møre og Romsdal": "Møre og Romsdal",
-    "Nord-Trøndelag": "Trøndelag",
-    "Nordland": "Nordland",
-    "Nordland - Nordlánnda": "Nordland",
-    "Oppland": "Innlandet",
-    "Oslo": "Oslo",
-    "Rogaland": "Rogaland",
-    "Sogn og Fjordane": "Vestland",
-    "Sør-Trøndelag": "Trøndelag",
-    "Telemark": "Telemark",
-    "Troms": "Troms",
-    "Troms - Romsa - Tromssa": "Troms",
-    "Troms og Finnmark": None,
-    "Trøndelag": "Trøndelag",
-    "Trøndelag - Trööndelage": "Trøndelag",
-    "Vest-Agder": "Agder",
-    "Vestfold": "Vestfold",
-    "Vestfold og Telemark": None,
-    "Vestland": "Vestland",
-    "Viken": None,
-    "Østfold": "Østfold",
-}
 
 CITY_TO_COUNTY = {
     "Alta": "Finnmark",
@@ -218,36 +169,6 @@ def ascii_fold(value: str) -> str:
         if unicodedata.category(character) != "Mn"
     )
     return normalized
-
-
-def normalize_county_name(name: str) -> str | None:
-    if not name:
-        return None
-
-    if name in LEGACY_COUNTY_NAMES:
-        return LEGACY_COUNTY_NAMES[name]
-
-    short_name = name.split(" - ")[0]
-    if short_name in LEGACY_COUNTY_NAMES:
-        return LEGACY_COUNTY_NAMES[short_name]
-
-    if short_name in CURRENT_COUNTIES.values():
-        return short_name
-
-    return None
-
-
-def county_tuple_from_name(name: str | None) -> tuple[str, str] | None:
-    current_name = normalize_county_name(clean_text(name))
-
-    if not current_name:
-        return None
-
-    for county_id, county_name in CURRENT_COUNTIES.items():
-        if county_name == current_name:
-            return county_id, county_name
-
-    return None
 
 
 def extract_openalex_key(value: str) -> str:

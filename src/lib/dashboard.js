@@ -14,6 +14,29 @@ function sumBy(records, selector) {
   return total;
 }
 
+function summarizeMatchMethods(methods) {
+  const matchedByMethods = [...methods].sort();
+
+  if (matchedByMethods.length === 0) {
+    return {
+      matchedBy: null,
+      matchedByMethods
+    };
+  }
+
+  if (matchedByMethods.length === 1) {
+    return {
+      matchedBy: matchedByMethods[0],
+      matchedByMethods
+    };
+  }
+
+  return {
+    matchedBy: "multiple_methods",
+    matchedByMethods
+  };
+}
+
 export function isDefaultFilter(filters) {
   return Object.values(filters).every((value) => value === ALL_FILTER_VALUE);
 }
@@ -670,6 +693,7 @@ export function buildEfficiencyInstitutionRankings(
       id: record.institutionId,
       label: record.institutionName,
       matchedBy: record.matchedBy,
+      matchedByMethods: new Set(),
       paperCount: 0,
       papersPerMnok: 0,
       rankingEligible: false
@@ -678,6 +702,9 @@ export function buildEfficiencyInstitutionRankings(
     current.paperCount += record.paperCount ?? 0;
     current.citationCount += record.citationCount ?? 0;
     current.fundingNok += record.fundingNok ?? 0;
+    if (record.matchedBy) {
+      current.matchedByMethods.add(record.matchedBy);
+    }
     current.papersPerMnok =
       current.fundingNok > 0 ? current.paperCount / (current.fundingNok / 1_000_000) : 0;
     current.citationsPerMnok =
@@ -688,6 +715,10 @@ export function buildEfficiencyInstitutionRankings(
   }
 
   return [...buckets.values()]
+    .map((item) => ({
+      ...item,
+      ...summarizeMatchMethods(item.matchedByMethods)
+    }))
     .filter((item) => item.rankingEligible)
     .sort((left, right) => right.papersPerMnok - left.papersPerMnok);
 }

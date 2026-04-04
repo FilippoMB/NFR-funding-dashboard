@@ -15,6 +15,11 @@ DEFAULT_FUNDING_DIR = "public/data"
 DEFAULT_IMPACT_DIR = "public/data/impact"
 DEFAULT_MIN_FUNDING_NOK = 10_000_000
 DEFAULT_MIN_PAPER_COUNT = 10
+NORWEGIAN_ASCII_FOLD = str.maketrans({
+    "å": "a",
+    "æ": "ae",
+    "ø": "o",
+})
 
 LEGAL_NAME_ALIASES = {
     "universitetet i oslo": "university of oslo",
@@ -49,7 +54,7 @@ LEGAL_NAME_ALIASES = {
     "institutt for samfunnsforskning sti": "institute for social research",
     "norsk utenrikspolitisk institutt": "norwegian institute of international affairs",
     "forskningsstiftelsen nifu": (
-        "nifu nordic institute for studies in innovation research and education"
+        "nordic institute for studies in innovation, research and education"
     ),
     "chr michelsens institutt for videnskap og andsfrihet sti": (
         "chr michelsen institute"
@@ -98,7 +103,7 @@ SHORT_NAME_ALLOWLIST = {
     "toi": "institute of transport economics",
     "isf": "institute for social research",
     "nupi": "norwegian institute of international affairs",
-    "nifu": "nifu nordic institute for studies in innovation research and education",
+    "nifu": "nordic institute for studies in innovation, research and education",
     "cmi": "chr michelsen institute",
     "fafo": "fafo foundation",
     "uia": "university of agder",
@@ -174,13 +179,13 @@ def clean_text(value: Any) -> str:
 
 
 def normalize_name(value: str) -> str:
-    normalized = unicodedata.normalize("NFD", clean_text(value))
+    normalized = clean_text(value).casefold().translate(NORWEGIAN_ASCII_FOLD)
+    normalized = unicodedata.normalize("NFD", normalized)
     normalized = "".join(
         character
         for character in normalized
         if unicodedata.category(character) != "Mn"
     )
-    normalized = normalized.lower()
     normalized = re.sub(r"[^a-z0-9]+", " ", normalized).strip()
     return normalized
 
@@ -296,9 +301,46 @@ def build_audit_candidate_lookup(
     return lookup
 
 
+def collect_stale_match_configurations(
+    impact_lookup: dict[str, dict[str, Any]]
+) -> list[dict[str, str]]:
+    stale_configurations: list[dict[str, str]] = []
+
+    for table_name, mapping in (
+        ("legal_name_aliases", LEGAL_NAME_ALIASES),
+        ("short_name_allowlist", SHORT_NAME_ALLOWLIST),
+    ):
+        for source_key, target_name in sorted(mapping.items()):
+            normalized_target = normalize_name(target_name)
+
+            if normalized_target and normalized_target not in impact_lookup:
+                stale_configurations.append(
+                    {
+                        "normalizedTarget": normalized_target,
+                        "sourceKey": source_key,
+                        "table": table_name,
+                        "targetName": target_name,
+                    }
+                )
+
+    return stale_configurations
+
+
 def round_metric(value: float) -> float:
     rounded = round(float(value), 6)
     return 0.0 if abs(rounded) < 1e-9 else rounded
+
+
+def summarize_match_methods(methods: set[str]) -> tuple[str | None, list[str]]:
+    match_methods = sorted(methods)
+
+    if not match_methods:
+        return None, []
+
+    if len(match_methods) == 1:
+        return match_methods[0], match_methods
+
+    return "multiple_methods", match_methods
 
 
 def allocate_metric_by_funding(
@@ -331,52 +373,6 @@ def allocate_metric_by_funding(
             remaining_metric = round_metric(remaining_metric - allocation)
 
         row[metric_key] = round_metric(allocation)
-
-
-def aggregate_funding_by_county(
-    funding_cube: list[dict[str, Any]],
-    overlap_years: set[int]
-) -> dict[str, dict[str, Any]]:
-    county_totals: dict[str, dict[str, Any]] = defaultdict(
-        lambda: {"countyName": "", "fundingNok": 0}
-    )
-
-    for row in funding_cube:
-        if row["year"] not in overlap_years:
-            continue
-
-        county = county_totals[row["countyId"]]
-        county["countyId"] = row["countyId"]
-        county["countyName"] = row.get("countyName", county["countyName"])
-        county["fundingNok"] += row["totalFundingNok"]
-
-    return county_totals
-
-
-def aggregate_impact_by_county(
-    impact_cube: list[dict[str, Any]],
-    overlap_years: set[int]
-) -> dict[str, dict[str, Any]]:
-    county_totals: dict[str, dict[str, Any]] = defaultdict(
-        lambda: {"citationCount": 0, "countyName": "", "paperCount": 0}
-    )
-    county_institutions: dict[str, set[str]] = defaultdict(set)
-
-    for row in impact_cube:
-        if row["year"] not in overlap_years or not row.get("countyId"):
-            continue
-
-        county = county_totals[row["countyId"]]
-        county["countyId"] = row["countyId"]
-        county["countyName"] = row.get("countyName", county["countyName"])
-        county["paperCount"] += row["paperCount"]
-        county["citationCount"] += row["citationCount"]
-        county_institutions[row["countyId"]].add(row["institutionId"])
-
-    for county_id, institutions in county_institutions.items():
-        county_totals[county_id]["institutionCount"] = len(institutions)
-
-    return county_totals
 
 
 def aggregate_efficiency_timeseries(
@@ -480,9 +476,11 @@ def aggregate_institutions(
     list[dict[str, Any]],
     list[dict[str, Any]],
     list[dict[str, Any]],
+    list[dict[str, str]],
 ]:
     impact_lookup = build_impact_lookup(impact_institutions)
     audit_candidate_lookup = build_audit_candidate_lookup(impact_institutions)
+    stale_match_configurations = collect_stale_match_configurations(impact_lookup)
 
     funding_joined: dict[str, dict[str, Any]] = {}
     unmatched_funding: dict[str, dict[str, Any]] = defaultdict(
@@ -608,6 +606,7 @@ def aggregate_institutions(
                 "id": row["institutionId"],
                 "label": row["institutionName"],
                 "matchedBy": row["matchedBy"],
+                "matchedByMethods": set(),
                 "paperCount": 0,
                 "papersPerMnok": 0.0,
                 "primaryCountyFundingNok": 0,
@@ -617,6 +616,8 @@ def aggregate_institutions(
         current["fundingNok"] += row["fundingNok"]
         current["paperCount"] += row["paperCount"]
         current["citationCount"] += row["citationCount"]
+        if row.get("matchedBy"):
+            current["matchedByMethods"].add(row["matchedBy"])
         if row.get("countyId"):
             current["countyIds"].add(row["countyId"])
         if row["fundingNok"] > current["primaryCountyFundingNok"]:
@@ -638,6 +639,9 @@ def aggregate_institutions(
         current["rankingEligible"] = (
             current["fundingNok"] >= min_funding_nok
             and current["paperCount"] >= min_paper_count
+        )
+        current["matchedBy"], current["matchedByMethods"] = summarize_match_methods(
+            current["matchedByMethods"]
         )
         current["countyIds"] = sorted(current["countyIds"])
         current.pop("primaryCountyFundingNok", None)
@@ -683,6 +687,7 @@ def aggregate_institutions(
         institution_cube,
         unmatched_funding_institutions,
         blocked_funding_institutions,
+        stale_match_configurations,
     )
 
 
@@ -696,6 +701,7 @@ def write_output(output_dir: Path, payload: dict[str, Any]) -> None:
         ("institution_cube.json", "institution_cube"),
         ("timeseries.json", "timeseries"),
         ("blocked_funding_institutions.json", "blocked_funding_institutions"),
+        ("stale_match_configurations.json", "stale_match_configurations"),
         ("unmatched_funding_institutions.json", "unmatched_funding_institutions"),
     ):
         (output_dir / file_name).write_text(
@@ -716,7 +722,6 @@ def main() -> None:
     impact_dir = Path(args.impact_dir)
 
     funding_summary = read_json(funding_dir / "summary.json")
-    funding_cube = read_json(funding_dir / "funding_cube.json")
     funding_institution_cube = read_json(funding_dir / "funding_institution_cube.json")
 
     impact_summary = read_json(impact_dir / "summary.json")
@@ -728,7 +733,7 @@ def main() -> None:
     )
     overlap_year_set = set(overlap_years)
 
-    by_institution, institution_cube, unmatched_funding_institutions, blocked_funding_institutions = aggregate_institutions(
+    by_institution, institution_cube, unmatched_funding_institutions, blocked_funding_institutions, stale_match_configurations = aggregate_institutions(
         funding_institution_cube=funding_institution_cube,
         impact_institution_cube=impact_institution_cube,
         impact_institutions=impact_institutions,
@@ -745,6 +750,20 @@ def main() -> None:
     total_paper_count = sum(item["paperCount"] for item in matched_institutions)
     total_citation_count = sum(item["citationCount"] for item in matched_institutions)
 
+    notes = [
+        "Efficiency is defined as published papers divided by funding in MNOK over the overlapping funding/OpenAlex year window.",
+        "The current efficiency dataset uses only years present in both sources.",
+        "Institution joins use exact legal-name matches, explicit legal-name aliases, and an audited short-name allowlist.",
+        "Ambiguous short-name matches are excluded from efficiency outputs until they are manually audited.",
+        "Institution-year outputs are allocated across matched funding counties in proportion to each county row's share of funding.",
+        "Ranking eligibility requires both a minimum funding level and a minimum paper count to reduce small-denominator distortions.",
+    ]
+
+    if stale_match_configurations:
+        notes.append(
+            "Some curated alias or allowlist targets do not exist in the current OpenAlex snapshot; see stale_match_configurations.json."
+        )
+
     payload = {
         "summary": {
             "filters": {
@@ -757,20 +776,14 @@ def main() -> None:
             "rankingEligibleInstitutionCount": len(matched_eligible),
             "minFundingNokForRanking": args.min_funding_nok,
             "minPaperCountForRanking": args.min_paper_count,
-            "notes": [
-                "Efficiency is defined as published papers divided by funding in MNOK over the overlapping funding/OpenAlex year window.",
-                "The current efficiency dataset uses only years present in both sources.",
-                "Institution joins use exact legal-name matches, explicit legal-name aliases, and an audited short-name allowlist.",
-                "Ambiguous short-name matches are excluded from efficiency outputs until they are manually audited.",
-                "Institution-year outputs are allocated across matched funding counties in proportion to each county row's share of funding.",
-                "Ranking eligibility requires both a minimum funding level and a minimum paper count to reduce small-denominator distortions.",
-            ],
+            "notes": notes,
             "overlapYearStart": overlap_years[0] if overlap_years else None,
             "paperCount": total_paper_count,
             "citationCount": total_citation_count,
             "fundingNok": total_funding_nok,
             "papersPerMnok": papers_per_mnok(total_paper_count, total_funding_nok),
             "citationsPerMnok": citations_per_mnok(total_citation_count, total_funding_nok),
+            "staleMatchConfigurationCount": len(stale_match_configurations),
             "source": {
                 "funding": funding_summary["source"]["label"],
                 "impact": impact_summary["source"]["label"],
@@ -781,6 +794,7 @@ def main() -> None:
         "by_institution": by_institution,
         "blocked_funding_institutions": blocked_funding_institutions,
         "institution_cube": institution_cube,
+        "stale_match_configurations": stale_match_configurations,
         "timeseries": timeseries,
         "unmatched_funding_institutions": unmatched_funding_institutions,
     }

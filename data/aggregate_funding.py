@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any, Iterable
 from urllib.request import urlopen
 
+from county_utils import CURRENT_COUNTIES, county_tuple_from_code, county_tuple_from_name
+
 
 OFFICIAL_SOURCE_URL = (
     "https://raw.githubusercontent.com/Forskningsradet/open-data/main/"
@@ -21,84 +23,34 @@ OFFICIAL_SOURCE_PAGE = (
     "https://github.com/Forskningsradet/open-data/tree/main/datasets/soknader2"
 )
 OFFICIAL_SOURCE_LABEL = "Forskningsrådet open data"
-
-CURRENT_COUNTIES = {
-    "03": "Oslo",
-    "11": "Rogaland",
-    "15": "Møre og Romsdal",
-    "18": "Nordland",
-    "31": "Østfold",
-    "32": "Akershus",
-    "33": "Buskerud",
-    "34": "Innlandet",
-    "39": "Vestfold",
-    "40": "Telemark",
-    "42": "Agder",
-    "46": "Vestland",
-    "50": "Trøndelag",
-    "55": "Troms",
-    "56": "Finnmark"
+RAW_RECORD_KEYS = {
+    "prosjektnummer",
+    "tildelt_belop",
+    "kommunenummer",
+    "fylkenummer",
+    "fylke",
+    "prosjektstart",
+    "soknadsdato",
+    "sokstart",
+    "prosjektansvarlig_navn",
+    "kortnavn",
 }
-
-LEGACY_COUNTY_CODES = {
-    "01": "Østfold",
-    "02": "Akershus",
-    "03": "Oslo",
-    "04": "Innlandet",
-    "05": "Innlandet",
-    "06": "Buskerud",
-    "07": "Vestfold",
-    "08": "Telemark",
-    "09": "Agder",
-    "10": "Agder",
-    "11": "Rogaland",
-    "12": "Vestland",
-    "14": "Vestland",
-    "15": "Møre og Romsdal",
-    "16": "Trøndelag",
-    "17": "Trøndelag",
-    "18": "Nordland",
-    "19": "Troms",
-    "20": "Finnmark",
-    "30": None,
-    "50": "Trøndelag",
-    "54": None,
-    "55": "Troms",
-    "56": "Finnmark"
+AGGREGATED_RECORD_KEYS = {
+    "allocated_nok",
+    "year",
+    "county_id",
+    "county_name",
+    "institution_id",
+    "institution_name",
+    "institution_short_name",
+    "institution_legal_name",
+    "scheme_id",
+    "scheme_name",
+    "subject_id",
+    "subject_name",
+    "project_count",
 }
-
-LEGACY_COUNTY_NAMES = {
-    "Akershus": "Akershus",
-    "Agder": "Agder",
-    "Aust-Agder": "Agder",
-    "Buskerud": "Buskerud",
-    "Finnmark": "Finnmark",
-    "Finnmark - Finnmárku - Finmarkku": "Finnmark",
-    "Hedmark": "Innlandet",
-    "Hordaland": "Vestland",
-    "Innlandet": "Innlandet",
-    "Møre og Romsdal": "Møre og Romsdal",
-    "Nord-Trøndelag": "Trøndelag",
-    "Nordland": "Nordland",
-    "Nordland - Nordlánnda": "Nordland",
-    "Oppland": "Innlandet",
-    "Oslo": "Oslo",
-    "Rogaland": "Rogaland",
-    "Sogn og Fjordane": "Vestland",
-    "Sør-Trøndelag": "Trøndelag",
-    "Telemark": "Telemark",
-    "Troms": "Troms",
-    "Troms - Romsa - Tromssa": "Troms",
-    "Troms og Finnmark": None,
-    "Trøndelag": "Trøndelag",
-    "Trøndelag - Trööndelage": "Trøndelag",
-    "Vest-Agder": "Agder",
-    "Vestfold": "Vestfold",
-    "Vestfold og Telemark": None,
-    "Vestland": "Vestland",
-    "Viken": None,
-    "Østfold": "Østfold"
-}
+AGGREGATED_REQUIRED_KEYS = {"allocated_nok", "year", "county_name"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -167,47 +119,68 @@ def parse_year(value: Any) -> int | None:
     return None
 
 
-def normalize_county_name(name: str) -> str | None:
-    if not name:
-        return None
+def county_tuple_from_identifier(identifier: str) -> tuple[str, str] | None:
+    county = county_tuple_from_code(identifier)
 
-    if name in LEGACY_COUNTY_NAMES:
-        return LEGACY_COUNTY_NAMES[name]
+    if county:
+        return county
 
-    short_name = name.split(" - ")[0]
-    return LEGACY_COUNTY_NAMES.get(short_name, short_name if short_name in CURRENT_COUNTIES.values() else None)
+    county = county_tuple_from_name(identifier)
+
+    if county:
+        return county
+
+    normalized_identifier = slugify(identifier)
+    for county_id, county_name in CURRENT_COUNTIES.items():
+        if slugify(county_name) == normalized_identifier:
+            return county_id, county_name
+
+    return None
+
+
+def detect_record_format(record: dict[str, Any]) -> str:
+    has_raw_keys = any(key in record for key in RAW_RECORD_KEYS)
+    has_aggregated_keys = any(key in record for key in AGGREGATED_RECORD_KEYS)
+
+    if has_raw_keys and has_aggregated_keys:
+        raise ValueError(
+            "Ambiguous record format: found both raw funding fields and aggregated JSON fields."
+        )
+
+    if has_raw_keys:
+        return "raw"
+
+    if has_aggregated_keys:
+        missing_keys = sorted(AGGREGATED_REQUIRED_KEYS - record.keys())
+
+        if missing_keys:
+            raise ValueError(
+                "Aggregated JSON record is missing required fields: "
+                + ", ".join(missing_keys)
+            )
+
+        return "aggregated"
+
+    raise ValueError(
+        "Unrecognized record format: expected either official funding fields or aggregated JSON fields."
+    )
 
 
 def resolve_county(record: dict[str, Any]) -> tuple[str, str] | None:
     municipality_code = re.sub(r"\D", "", clean_text(record.get("kommunenummer")))
 
     if len(municipality_code) >= 4:
-        county_code = municipality_code[:2]
-        county_name = CURRENT_COUNTIES.get(county_code)
+        county = county_tuple_from_code(municipality_code[:2])
 
-        if county_name:
-            return county_code, county_name
+        if county:
+            return county
 
-    county_code = re.sub(r"\D", "", clean_text(record.get("fylkenummer"))).zfill(2)
+    county = county_tuple_from_code(record.get("fylkenummer", ""))
 
-    if county_code in CURRENT_COUNTIES:
-        return county_code, CURRENT_COUNTIES[county_code]
+    if county:
+        return county
 
-    if county_code in LEGACY_COUNTY_CODES:
-        mapped_name = LEGACY_COUNTY_CODES[county_code]
-
-        if mapped_name:
-            return slugify(mapped_name), mapped_name
-
-    county_name = normalize_county_name(clean_text(record.get("fylke")))
-
-    if county_name:
-        for code, current_name in CURRENT_COUNTIES.items():
-            if current_name == county_name:
-                return code, current_name
-        return slugify(county_name), county_name
-
-    return None
+    return county_tuple_from_name(clean_text(record.get("fylke")))
 
 
 def resolve_year(record: dict[str, Any]) -> int | None:
@@ -248,7 +221,9 @@ def resolve_subject(record: dict[str, Any]) -> tuple[str, str]:
 
 
 def normalize_record(record: dict[str, Any]) -> dict[str, Any] | None:
-    if "prosjektnummer" not in record and "tildelt_belop" not in record:
+    record_format = detect_record_format(record)
+
+    if record_format == "aggregated":
         amount = parse_float(record.get("allocated_nok"))
         year = parse_year(record.get("year"))
         county_name = clean_text(record.get("county_name"))
@@ -267,9 +242,17 @@ def normalize_record(record: dict[str, Any]) -> dict[str, Any] | None:
         if amount <= 0 or year is None or not county_name:
             return None
 
+        county = (
+            county_tuple_from_identifier(clean_text(record.get("county_id")))
+            or county_tuple_from_name(county_name)
+        )
+
+        if county is None:
+            return None
+
         return {
-            "countyId": clean_text(record.get("county_id")) or slugify(county_name),
-            "countyName": county_name,
+            "countyId": county[0],
+            "countyName": county[1],
             "id": clean_text(record.get("id")),
             "institutionId": clean_text(record.get("institution_id")) or slugify(institution_name),
             "institutionName": institution_name or "Ukjent prosjektansvarlig",
@@ -588,8 +571,11 @@ def main() -> None:
     normalized_records: list[dict[str, Any]] = []
     skipped_records = 0
 
-    for record in source_records:
-        normalized = normalize_record(record)
+    for index, record in enumerate(source_records, start=1):
+        try:
+            normalized = normalize_record(record)
+        except ValueError as error:
+            raise ValueError(f"Invalid record at position {index} from {source_label}: {error}") from error
 
         if normalized is None:
             skipped_records += 1
