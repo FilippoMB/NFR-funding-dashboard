@@ -11,7 +11,6 @@ Run everything from the repository root:
 ```sh
 npm install
 npm run data:build
-npm run data:build:mock
 npm run impact:build
 npm run efficiency:build
 npm run dev
@@ -25,7 +24,7 @@ uv venv .venv
 source .venv/bin/activate
 ```
 
-All three Python data scripts are stdlib-only today; `data/requirements.txt` is informational only.
+All three Python data scripts are stdlib-only today.
 
 ## Local Environment Policy
 Install tools and Python dependencies locally in this folder whenever possible. Prefer a project-local virtual environment at `.venv/` managed by `uv`. Do not install Python packages globally with `pip`, and do not create ad hoc environments outside the repository unless the user explicitly asks for a shared `micromamba` environment under the home directory. Minimize writes outside the repo; if a command would use a global cache or system path, prefer a repo-local alternative.

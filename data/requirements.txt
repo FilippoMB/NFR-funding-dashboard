@@ -1,2 +1,0 @@
-# No third-party Python packages are required for the default static data pipeline.
-# The script uses the Python 3 standard library only.

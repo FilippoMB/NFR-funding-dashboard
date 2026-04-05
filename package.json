@@ -8,7 +8,6 @@
     "build": "vite build",
     "preview": "vite preview",
     "data:build": "python3 data/aggregate_funding.py --output public/data",
-    "data:build:mock": "python3 data/aggregate_funding.py --input data/mock_projects.json --output public/data",
     "impact:build": "python3 data/aggregate_impact.py --output public/data/impact",
     "efficiency:build": "python3 data/aggregate_efficiency.py --output public/data/efficiency"
   },
